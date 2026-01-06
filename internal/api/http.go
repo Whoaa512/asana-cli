@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -106,7 +107,7 @@ func (c *HTTPClient) doWithRetry(ctx context.Context, method, path string, bodyB
 
 	var body io.Reader
 	if bodyBytes != nil {
-		body = newBytesReader(bodyBytes)
+		body = bytes.NewReader(bodyBytes)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
@@ -253,24 +254,6 @@ func calculateBackoff(attempt int, retryAfter time.Duration) time.Duration {
 	}
 	jitter := time.Duration(rand.Int63n(int64(backoff) / 4))
 	return backoff + jitter
-}
-
-type bytesReader struct {
-	data []byte
-	pos  int
-}
-
-func newBytesReader(data []byte) *bytesReader {
-	return &bytesReader{data: data}
-}
-
-func (r *bytesReader) Read(p []byte) (int, error) {
-	if r.pos >= len(r.data) {
-		return 0, io.EOF
-	}
-	n := copy(p, r.data[r.pos:])
-	r.pos += n
-	return n, nil
 }
 
 var _ Client = (*HTTPClient)(nil)
