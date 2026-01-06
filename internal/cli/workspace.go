@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -10,6 +11,7 @@ import (
 
 	"github.com/whoaa512/asana-cli/internal/config"
 	"github.com/whoaa512/asana-cli/internal/errors"
+	"github.com/whoaa512/asana-cli/internal/models"
 	"github.com/whoaa512/asana-cli/internal/output"
 )
 
@@ -110,6 +112,10 @@ func runWorkspaceUse(_ *cobra.Command, args []string) error {
 		return err
 	}
 
+	if cfg.DryRun {
+		return printWorkspaceUseDryRun(cfg, gid, workspace)
+	}
+
 	if workspaceUseGlobal {
 		if err := setGlobalWorkspace(cfg.ConfigPath, gid); err != nil {
 			return err
@@ -173,6 +179,24 @@ func setLocalWorkspace(gid string) error {
 
 	if err := ctx.Save(dir); err != nil {
 		return errors.NewGeneralError("failed to save local context", err)
+	}
+
+	return nil
+}
+
+func printWorkspaceUseDryRun(cfg *config.Config, gid string, ws *models.Workspace) error {
+	fmt.Println("[dry-run] Would set workspace to:", ws.Name, "("+gid+")")
+
+	if workspaceUseGlobal {
+		fmt.Println("[dry-run] Target file:", cfg.ConfigPath)
+		fmt.Println("[dry-run] Would write: default_workspace =", gid)
+	} else {
+		dir, err := config.FindContextFileDir()
+		if err != nil {
+			dir = "."
+		}
+		fmt.Println("[dry-run] Target file:", filepath.Join(dir, ".asana.json"))
+		fmt.Println("[dry-run] Would write: workspace =", gid)
 	}
 
 	return nil
