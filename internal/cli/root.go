@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"os"
 	"time"
 
@@ -57,9 +58,9 @@ var logCmd = &cobra.Command{
 
 var noteCmd = &cobra.Command{
 	Use:   "note <message>",
-	Short: "Add note to current session (alias for 'session log')",
+	Short: "Add comment to context task (alias for 'task comment add')",
 	Args:  cobra.ExactArgs(1),
-	RunE:  runSessionLog,
+	RunE:  runNote,
 }
 
 var doneCmd = &cobra.Command{
@@ -101,4 +102,32 @@ func requireAuth(cfg *config.Config) error {
 		return errors.NewAuthError("ASANA_ACCESS_TOKEN environment variable not set")
 	}
 	return nil
+}
+
+func runNote(_ *cobra.Command, args []string) error {
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
+	if err := requireAuth(cfg); err != nil {
+		return err
+	}
+
+	if cfg.Task == "" {
+		return errors.NewGeneralError("no task in context, set via 'ctx task <gid>'", nil)
+	}
+
+	if cfg.DryRun {
+		out := output.NewJSON(os.Stdout)
+		return out.Print(map[string]any{"dry_run": true, "task_gid": cfg.Task, "text": args[0]})
+	}
+
+	client := newClient(cfg)
+	story, err := client.AddComment(context.Background(), cfg.Task, args[0])
+	if err != nil {
+		return err
+	}
+
+	out := output.NewJSON(os.Stdout)
+	return out.Print(story)
 }
