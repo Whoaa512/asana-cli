@@ -24,4 +24,14 @@ type Client interface {
 
 	ListSubtasks(ctx context.Context, taskGID string, limit int, offset string) (*models.ListResponse[models.Task], error)
 	AddSubtask(ctx context.Context, parentGID string, name string) (*models.Task, error)
+
+	ListProjects(ctx context.Context, opts ProjectListOptions) (*models.ListResponse[models.Project], error)
+	GetProject(ctx context.Context, gid string) (*models.Project, error)
+
+	ListSections(ctx context.Context, opts SectionListOptions) (*models.ListResponse[models.Section], error)
+	GetSection(ctx context.Context, gid string) (*models.Section, error)
+
+	ListTags(ctx context.Context, opts TagListOptions) (*models.ListResponse[models.Tag], error)
+	GetTag(ctx context.Context, gid string) (*models.Tag, error)
+	CreateTag(ctx context.Context, workspaceGID string, req models.TagCreateRequest) (*models.Tag, error)
 }
