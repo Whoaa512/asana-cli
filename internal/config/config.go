@@ -142,6 +142,10 @@ func (c *Config) applyFlags(flags *Flags) {
 }
 
 func expandPath(path string) string {
+	return ExpandPath(path)
+}
+
+func ExpandPath(path string) string {
 	if len(path) > 0 && path[0] == '~' {
 		home, err := os.UserHomeDir()
 		if err != nil {
@@ -150,6 +154,10 @@ func expandPath(path string) string {
 		return filepath.Join(home, path[1:])
 	}
 	return path
+}
+
+func (c *Config) ConfigFileLoaded() bool {
+	return c.configFileLoaded
 }
 
 func parseBool(s string) bool {
