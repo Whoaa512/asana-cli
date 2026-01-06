@@ -1,3 +1,18 @@
-node_modules/
+# Binary
+/asana
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test
 coverage/
+*.out
+
+# Local config (for testing)
 *.local.*
+
+# OS
+.DS_Store
