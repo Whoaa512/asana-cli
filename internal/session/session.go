@@ -8,7 +8,8 @@ import (
 	"time"
 )
 
-const SessionFile = ".asana-session.json"
+const SessionDir = ".asana-cli"
+const SessionFile = "session.json"
 
 type LogEntry struct {
 	Timestamp time.Time `json:"ts"`
@@ -58,7 +59,7 @@ func (s *Session) IsStale() bool {
 }
 
 func Load(dir string) (*Session, error) {
-	path := filepath.Join(dir, SessionFile)
+	path := filepath.Join(dir, SessionDir, SessionFile)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -77,7 +78,11 @@ func Load(dir string) (*Session, error) {
 }
 
 func (s *Session) Save(dir string) error {
-	path := filepath.Join(dir, SessionFile)
+	sessionDir := filepath.Join(dir, SessionDir)
+	if err := os.MkdirAll(sessionDir, 0755); err != nil {
+		return err
+	}
+	path := filepath.Join(sessionDir, SessionFile)
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err
@@ -87,7 +92,7 @@ func (s *Session) Save(dir string) error {
 }
 
 func Delete(dir string) error {
-	path := filepath.Join(dir, SessionFile)
+	path := filepath.Join(dir, SessionDir, SessionFile)
 	err := os.Remove(path)
 	if os.IsNotExist(err) {
 		return nil
