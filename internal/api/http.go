@@ -5,12 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/whoaa512/asana-cli/internal/config"
 	"github.com/whoaa512/asana-cli/internal/errors"
 	"github.com/whoaa512/asana-cli/internal/models"
+)
+
+const (
+	maxRetries     = 3
+	initialBackoff = 1 * time.Second
+	maxBackoff     = 30 * time.Second
 )
 
 type HTTPClient struct {
@@ -81,7 +89,25 @@ func (c *HTTPClient) delete(ctx context.Context, path string) error {
 }
 
 func (c *HTTPClient) do(ctx context.Context, method, path string, body io.Reader, result any) error {
+	var bodyBytes []byte
+	if body != nil {
+		var err error
+		bodyBytes, err = io.ReadAll(body)
+		if err != nil {
+			return errors.NewGeneralError("failed to read request body", err)
+		}
+	}
+
+	return c.doWithRetry(ctx, method, path, bodyBytes, result, 0)
+}
+
+func (c *HTTPClient) doWithRetry(ctx context.Context, method, path string, bodyBytes []byte, result any, attempt int) error {
 	url := c.baseURL + path
+
+	var body io.Reader
+	if bodyBytes != nil {
+		body = newBytesReader(bodyBytes)
+	}
 
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
@@ -90,13 +116,16 @@ func (c *HTTPClient) do(ctx context.Context, method, path string, body io.Reader
 
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("Accept", "application/json")
-	if body != nil {
+	if bodyBytes != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
 
 	if c.debug && c.debugOut != nil {
 		_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] %s %s\n", method, url)
 		_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] Authorization: Bearer %s...\n", truncateToken(c.token))
+		if bodyBytes != nil {
+			_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] Request Body: %s\n", truncateBody(string(bodyBytes)))
+		}
 	}
 
 	start := time.Now()
@@ -117,6 +146,26 @@ func (c *HTTPClient) do(ctx context.Context, method, path string, body io.Reader
 
 	if c.debug && c.debugOut != nil {
 		_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] Body: %s\n", truncateBody(string(respBody)))
+	}
+
+	if resp.StatusCode == http.StatusTooManyRequests {
+		retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
+		if attempt >= maxRetries {
+			return errors.NewRateLimitedError(formatRetryAfter(retryAfter))
+		}
+
+		waitTime := calculateBackoff(attempt, retryAfter)
+		if c.debug && c.debugOut != nil {
+			_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] Rate limited, retrying in %s (attempt %d/%d)\n", waitTime, attempt+1, maxRetries)
+		}
+
+		select {
+		case <-ctx.Done():
+			return errors.NewNetworkError("request cancelled", ctx.Err())
+		case <-time.After(waitTime):
+		}
+
+		return c.doWithRetry(ctx, method, path, bodyBytes, result, attempt+1)
 	}
 
 	if err := c.checkError(resp.StatusCode, respBody); err != nil {
@@ -175,6 +224,53 @@ func truncateBody(body string) string {
 		return body[:500] + "..."
 	}
 	return body
+}
+
+func parseRetryAfter(header string) time.Duration {
+	if header == "" {
+		return 0
+	}
+	if seconds, err := strconv.Atoi(header); err == nil {
+		return time.Duration(seconds) * time.Second
+	}
+	return 0
+}
+
+func formatRetryAfter(d time.Duration) string {
+	if d == 0 {
+		return ""
+	}
+	return d.String()
+}
+
+func calculateBackoff(attempt int, retryAfter time.Duration) time.Duration {
+	if retryAfter > 0 {
+		return retryAfter
+	}
+	backoff := initialBackoff * (1 << attempt)
+	if backoff > maxBackoff {
+		backoff = maxBackoff
+	}
+	jitter := time.Duration(rand.Int63n(int64(backoff) / 4))
+	return backoff + jitter
+}
+
+type bytesReader struct {
+	data []byte
+	pos  int
+}
+
+func newBytesReader(data []byte) *bytesReader {
+	return &bytesReader{data: data}
+}
+
+func (r *bytesReader) Read(p []byte) (int, error) {
+	if r.pos >= len(r.data) {
+		return 0, io.EOF
+	}
+	n := copy(p, r.data[r.pos:])
+	r.pos += n
+	return n, nil
 }
 
 var _ Client = (*HTTPClient)(nil)
