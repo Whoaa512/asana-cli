@@ -34,6 +34,30 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&flagDryRun, "dry-run", false, "Preview mutations without executing")
 	rootCmd.PersistentFlags().DurationVar(&flagTimeout, "timeout", 0, "HTTP request timeout (default 30s)")
 	rootCmd.PersistentFlags().StringVar(&flagConfigPath, "config", "", "Config file path (default ~/.config/asana-cli/config.json)")
+
+	rootCmd.AddCommand(logCmd)
+	rootCmd.AddCommand(noteCmd)
+	rootCmd.AddCommand(doneCmd)
+}
+
+var logCmd = &cobra.Command{
+	Use:   "log <message>",
+	Short: "Add note to current session (alias for 'session log')",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runSessionLog,
+}
+
+var noteCmd = &cobra.Command{
+	Use:   "note <message>",
+	Short: "Add note to current session (alias for 'session log')",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runSessionLog,
+}
+
+var doneCmd = &cobra.Command{
+	Use:   "done",
+	Short: "End current work session (alias for 'session end')",
+	RunE:  runSessionEnd,
 }
 
 func Execute() int {
