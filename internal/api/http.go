@@ -68,6 +68,18 @@ func (c *HTTPClient) get(ctx context.Context, path string, result any) error {
 	return c.do(ctx, http.MethodGet, path, nil, result)
 }
 
+func (c *HTTPClient) post(ctx context.Context, path string, body io.Reader, result any) error {
+	return c.do(ctx, http.MethodPost, path, body, result)
+}
+
+func (c *HTTPClient) put(ctx context.Context, path string, body io.Reader, result any) error {
+	return c.do(ctx, http.MethodPut, path, body, result)
+}
+
+func (c *HTTPClient) delete(ctx context.Context, path string) error {
+	return c.do(ctx, http.MethodDelete, path, nil, nil)
+}
+
 func (c *HTTPClient) do(ctx context.Context, method, path string, body io.Reader, result any) error {
 	url := c.baseURL + path
 
