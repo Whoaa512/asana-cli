@@ -10,6 +10,7 @@ import (
 	"github.com/whoaa512/asana-cli/internal/api"
 	"github.com/whoaa512/asana-cli/internal/config"
 	"github.com/whoaa512/asana-cli/internal/errors"
+	"github.com/whoaa512/asana-cli/internal/models"
 	"github.com/whoaa512/asana-cli/internal/output"
 )
 
@@ -65,8 +66,8 @@ var noteCmd = &cobra.Command{
 
 var doneCmd = &cobra.Command{
 	Use:   "done",
-	Short: "End current work session (alias for 'session end')",
-	RunE:  runSessionEnd,
+	Short: "Mark context task as complete (alias for 'task complete')",
+	RunE:  runDone,
 }
 
 func Execute() int {
@@ -130,4 +131,35 @@ func runNote(_ *cobra.Command, args []string) error {
 
 	out := output.NewJSON(os.Stdout)
 	return out.Print(story)
+}
+
+func runDone(_ *cobra.Command, _ []string) error {
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
+	if err := requireAuth(cfg); err != nil {
+		return err
+	}
+
+	if cfg.Task == "" {
+		return errors.NewGeneralError("no task in context, set via 'ctx task <gid>'", nil)
+	}
+
+	completed := true
+	req := models.TaskUpdateRequest{Completed: &completed}
+
+	if cfg.DryRun {
+		out := output.NewJSON(os.Stdout)
+		return out.Print(map[string]any{"dry_run": true, "task_gid": cfg.Task, "action": "complete"})
+	}
+
+	client := newClient(cfg)
+	task, err := client.UpdateTask(context.Background(), cfg.Task, req)
+	if err != nil {
+		return err
+	}
+
+	out := output.NewJSON(os.Stdout)
+	return out.Print(task)
 }
