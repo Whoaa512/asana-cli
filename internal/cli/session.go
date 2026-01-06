@@ -101,14 +101,15 @@ func runSessionStart(_ *cobra.Command, args []string) error {
 		return errors.NewGeneralError("session already exists, use --force to override", nil)
 	}
 
+	localCtx, err := config.LoadLocalContext()
+	if err != nil {
+		return errors.NewGeneralError("failed to load context", err)
+	}
+
 	var taskGID string
 	if len(args) > 0 {
 		taskGID = args[0]
 	} else {
-		localCtx, err := config.LoadLocalContext()
-		if err != nil {
-			return errors.NewGeneralError("failed to load context", err)
-		}
 		taskGID = localCtx.Task
 	}
 
@@ -122,11 +123,6 @@ func runSessionStart(_ *cobra.Command, args []string) error {
 	}
 	if repo := session.GetRepoName(); repo != "" {
 		opts = append(opts, session.WithRepo(repo))
-	}
-
-	localCtx, err := config.LoadLocalContext()
-	if err != nil {
-		return errors.NewGeneralError("failed to load context", err)
 	}
 	if localCtx.Project != "" {
 		opts = append(opts, session.WithProject(localCtx.Project))
