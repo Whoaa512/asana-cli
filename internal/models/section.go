@@ -5,3 +5,7 @@ type Section struct {
 	Name    string         `json:"name"`
 	Project *AsanaResource `json:"project,omitempty"`
 }
+
+type SectionCreateRequest struct {
+	Name string `json:"name"`
+}

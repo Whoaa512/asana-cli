@@ -30,6 +30,8 @@ type Client interface {
 
 	ListSections(ctx context.Context, opts SectionListOptions) (*models.ListResponse[models.Section], error)
 	GetSection(ctx context.Context, gid string) (*models.Section, error)
+	CreateSection(ctx context.Context, projectGID string, req models.SectionCreateRequest) (*models.Section, error)
+	AddTaskToSection(ctx context.Context, sectionGID string, taskGID string) error
 
 	ListTags(ctx context.Context, opts TagListOptions) (*models.ListResponse[models.Tag], error)
 	GetTag(ctx context.Context, gid string) (*models.Tag, error)

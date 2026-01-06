@@ -1,7 +1,9 @@
 package api
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/whoaa512/asana-cli/internal/models"
@@ -54,4 +56,46 @@ func (c *HTTPClient) GetSection(ctx context.Context, gid string) (*models.Sectio
 	}
 
 	return &response.Data, nil
+}
+
+func (c *HTTPClient) CreateSection(ctx context.Context, projectGID string, req models.SectionCreateRequest) (*models.Section, error) {
+	payload := struct {
+		Data struct {
+			Name string `json:"name"`
+		} `json:"data"`
+	}{}
+	payload.Data.Name = req.Name
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode request: %w", err)
+	}
+
+	var response struct {
+		Data models.Section `json:"data"`
+	}
+
+	path := fmt.Sprintf("/projects/%s/sections", projectGID)
+	if err := c.post(ctx, path, bytes.NewReader(body), &response); err != nil {
+		return nil, err
+	}
+
+	return &response.Data, nil
+}
+
+func (c *HTTPClient) AddTaskToSection(ctx context.Context, sectionGID string, taskGID string) error {
+	payload := struct {
+		Data struct {
+			Task string `json:"task"`
+		} `json:"data"`
+	}{}
+	payload.Data.Task = taskGID
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to encode request: %w", err)
+	}
+
+	path := fmt.Sprintf("/sections/%s/addTask", sectionGID)
+	return c.post(ctx, path, bytes.NewReader(body), nil)
 }
