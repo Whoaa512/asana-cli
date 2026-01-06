@@ -59,6 +59,13 @@ var taskDeleteCmd = &cobra.Command{
 	RunE:  runTaskDelete,
 }
 
+var taskAssignCmd = &cobra.Command{
+	Use:   "assign <gid> <assignee>",
+	Short: "Assign a task to a user",
+	Args:  cobra.ExactArgs(2),
+	RunE:  runTaskAssign,
+}
+
 var (
 	taskListProject   string
 	taskListAssignee  string
@@ -87,6 +94,7 @@ func init() {
 	taskCmd.AddCommand(taskUpdateCmd)
 	taskCmd.AddCommand(taskCompleteCmd)
 	taskCmd.AddCommand(taskDeleteCmd)
+	taskCmd.AddCommand(taskAssignCmd)
 
 	taskListCmd.Flags().StringVar(&taskListProject, "project", "", "Filter by project GID")
 	taskListCmd.Flags().StringVar(&taskListAssignee, "assignee", "", "Filter by assignee GID or 'me'")
@@ -302,4 +310,31 @@ func runTaskDelete(_ *cobra.Command, args []string) error {
 
 	out := output.NewJSON(os.Stdout)
 	return out.Print(map[string]any{"deleted": true, "gid": args[0]})
+}
+
+func runTaskAssign(_ *cobra.Command, args []string) error {
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
+	if err := requireAuth(cfg); err != nil {
+		return err
+	}
+
+	assignee := args[1]
+	req := models.TaskUpdateRequest{Assignee: &assignee}
+
+	if cfg.DryRun {
+		out := output.NewJSON(os.Stdout)
+		return out.Print(map[string]any{"dry_run": true, "gid": args[0], "assignee": assignee})
+	}
+
+	client := newClient(cfg)
+	task, err := client.UpdateTask(context.Background(), args[0], req)
+	if err != nil {
+		return err
+	}
+
+	out := output.NewJSON(os.Stdout)
+	return out.Print(task)
 }
