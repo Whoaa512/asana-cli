@@ -114,8 +114,9 @@ func TestSessionSaveAndLoad(t *testing.T) {
 	if len(loaded.Logs) != 1 {
 		t.Errorf("expected 1 log, got %d", len(loaded.Logs))
 	}
-	if loaded.Path() != filepath.Join(dir, SessionFile) {
-		t.Errorf("unexpected path: %s", loaded.Path())
+	expectedPath := filepath.Join(dir, SessionDir, SessionFile)
+	if loaded.Path() != expectedPath {
+		t.Errorf("expected path %s, got %s", expectedPath, loaded.Path())
 	}
 }
 
@@ -139,7 +140,7 @@ func TestDelete(t *testing.T) {
 		t.Fatalf("failed to save session: %v", err)
 	}
 
-	path := filepath.Join(dir, SessionFile)
+	path := filepath.Join(dir, SessionDir, SessionFile)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		t.Fatal("session file should exist after save")
 	}
