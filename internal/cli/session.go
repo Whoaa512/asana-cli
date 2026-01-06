@@ -21,16 +21,40 @@ var sessionCmd = &cobra.Command{
 var sessionStartCmd = &cobra.Command{
 	Use:   "start [<task-gid>]",
 	Short: "Start a work session",
-	Long:  "Begin a work session on a task. Captures git branch and records start time.",
-	Args:  cobra.MaximumNArgs(1),
-	RunE:  runSessionStart,
+	Long: `Begin a work session on a task. Captures git branch and records start time.
+
+Session data is stored in .asana-cli/session.json in the repo root.
+Use 'session log' to add progress notes during work.
+End with 'session end' to post a summary comment to Asana.`,
+	Example: `  # Start session on a specific task
+  asana session start 1234567890
+
+  # Start session using task from context
+  asana ctx task 1234567890
+  asana session start
+
+  # Force start, discarding existing session
+  asana session start --force`,
+	Args: cobra.MaximumNArgs(1),
+	RunE: runSessionStart,
 }
 
 var sessionEndCmd = &cobra.Command{
 	Use:   "end",
 	Short: "End current work session",
-	Long:  "End the current session and post a summary to Asana.",
-	RunE:  runSessionEnd,
+	Long: `End the current session and post a summary to Asana as a comment.
+
+If no logs were recorded and no --summary provided, session ends without posting.
+Use --discard to end without posting even if logs exist.`,
+	Example: `  # End and post summary
+  asana session end
+
+  # End with additional summary text
+  asana session end --summary "Completed feature implementation"
+
+  # Discard session without posting
+  asana session end --discard`,
+	RunE: runSessionEnd,
 }
 
 var sessionStatusCmd = &cobra.Command{

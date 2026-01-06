@@ -35,7 +35,19 @@ var taskGetCmd = &cobra.Command{
 var taskCreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create a task",
-	RunE:  runTaskCreate,
+	Long: `Create a new task in Asana.
+
+Requires --name. Project can be specified via --project flag or from .asana.json context.
+Use --parent to create a subtask instead.`,
+	Example: `  # Create a task in a project
+  asana task create --name "Fix login bug" --project 1234567890
+
+  # Create with due date and assignee
+  asana task create --name "Review PR" --due-on 2024-01-15 --assignee me
+
+  # Create a subtask
+  asana task create --name "Write tests" --parent 9876543210`,
+	RunE: runTaskCreate,
 }
 
 var taskUpdateCmd = &cobra.Command{

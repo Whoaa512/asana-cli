@@ -21,9 +21,17 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:           "asana",
-	Short:         "CLI for interacting with Asana",
-	Long:          "A CLI tool for managing Asana tasks, designed for AI agents with JSON-only output.",
+	Use:   "asana",
+	Short: "CLI for interacting with Asana",
+	Long: `A CLI tool for managing Asana tasks, designed for AI agents with JSON-only output.
+
+Set ASANA_ACCESS_TOKEN environment variable to authenticate.
+Use .asana.json in your repo root to set project/task context.
+
+Global flags:
+  --debug     Print HTTP requests/responses to stderr
+  --dry-run   Preview mutations without executing
+  --workspace Override workspace GID`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
 }
