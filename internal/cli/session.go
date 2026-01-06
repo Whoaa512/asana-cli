@@ -184,6 +184,15 @@ func runSessionEnd(_ *cobra.Command, _ []string) error {
 	}
 
 	if sessionEndDiscard {
+		if cfg.DryRun {
+			out := output.NewJSON(os.Stdout)
+			return out.Print(map[string]any{
+				"dry_run":      true,
+				"action":       "discard",
+				"task_gid":     sess.TaskGID,
+				"session_path": sess.Path(),
+			})
+		}
 		if err := session.Delete(dir); err != nil {
 			return errors.NewGeneralError("failed to delete session", err)
 		}
@@ -197,6 +206,16 @@ func runSessionEnd(_ *cobra.Command, _ []string) error {
 	}
 
 	if !sess.HasLogs() && sessionEndSummary == "" {
+		if cfg.DryRun {
+			out := output.NewJSON(os.Stdout)
+			return out.Print(map[string]any{
+				"dry_run":      true,
+				"action":       "end_no_post",
+				"task_gid":     sess.TaskGID,
+				"reason":       "no logs or summary to post",
+				"session_path": sess.Path(),
+			})
+		}
 		if err := session.Delete(dir); err != nil {
 			return errors.NewGeneralError("failed to delete session", err)
 		}
@@ -213,6 +232,18 @@ func runSessionEnd(_ *cobra.Command, _ []string) error {
 
 	endBranch := session.GetCurrentBranch()
 	summary := sess.FormatSummary(endBranch, sessionEndSummary)
+
+	if cfg.DryRun {
+		out := output.NewJSON(os.Stdout)
+		return out.Print(map[string]any{
+			"dry_run":      true,
+			"action":       "end_and_post",
+			"task_gid":     sess.TaskGID,
+			"duration":     sess.FormatDuration(),
+			"summary":      summary,
+			"session_path": sess.Path(),
+		})
+	}
 
 	client := newClient(cfg)
 	story, err := client.AddComment(context.Background(), sess.TaskGID, summary)
