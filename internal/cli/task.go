@@ -84,6 +84,7 @@ var (
 	taskListCompleted string
 	taskListLimit     int
 	taskListOffset    string
+	taskListTag       string
 
 	taskCreateName     string
 	taskCreateNotes    string
@@ -113,6 +114,7 @@ func init() {
 	taskListCmd.Flags().StringVar(&taskListCompleted, "completed", "", "Filter by completed status (true/false)")
 	taskListCmd.Flags().IntVar(&taskListLimit, "limit", 50, "Max results to return")
 	taskListCmd.Flags().StringVar(&taskListOffset, "offset", "", "Pagination offset")
+	taskListCmd.Flags().StringVar(&taskListTag, "tag", "", "Filter by tag GID")
 
 	taskCreateCmd.Flags().StringVar(&taskCreateName, "name", "", "Task name (required)")
 	taskCreateCmd.Flags().StringVar(&taskCreateNotes, "notes", "", "Task notes/description")
@@ -142,17 +144,20 @@ func runTaskList(_ *cobra.Command, _ []string) error {
 		Assignee: taskListAssignee,
 		Limit:    taskListLimit,
 		Offset:   taskListOffset,
+		Tag:      taskListTag,
 	}
 
-	if opts.Project == "" && cfg.Project != "" {
-		opts.Project = cfg.Project
-	}
-
-	if opts.Project == "" {
-		if cfg.Workspace == "" {
-			return errors.NewGeneralError("no project or workspace specified", nil)
+	if opts.Tag == "" {
+		if opts.Project == "" && cfg.Project != "" {
+			opts.Project = cfg.Project
 		}
-		opts.Workspace = cfg.Workspace
+
+		if opts.Project == "" {
+			if cfg.Workspace == "" {
+				return errors.NewGeneralError("no project, tag, or workspace specified", nil)
+			}
+			opts.Workspace = cfg.Workspace
+		}
 	}
 
 	if taskListCompleted != "" {

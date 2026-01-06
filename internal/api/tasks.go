@@ -16,17 +16,20 @@ type TaskListOptions struct {
 	Limit     int
 	Offset    string
 	Workspace string
+	Tag       string
 }
 
 func (c *HTTPClient) ListTasks(ctx context.Context, opts TaskListOptions) (*models.ListResponse[models.Task], error) {
 	var path string
 
-	if opts.Project != "" {
+	if opts.Tag != "" {
+		path = fmt.Sprintf("/tags/%s/tasks", opts.Tag)
+	} else if opts.Project != "" {
 		path = fmt.Sprintf("/projects/%s/tasks", opts.Project)
 	} else if opts.Workspace != "" {
 		path = fmt.Sprintf("/workspaces/%s/tasks/search", opts.Workspace)
 	} else {
-		return nil, fmt.Errorf("either project or workspace is required")
+		return nil, fmt.Errorf("either project, tag, or workspace is required")
 	}
 
 	sep := "?"
