@@ -16,11 +16,14 @@ const (
 type Config struct {
 	AccessToken      string        `json:"-"`
 	Workspace        string        `json:"default_workspace,omitempty"`
+	Project          string        `json:"-"`
+	Task             string        `json:"-"`
 	Timeout          time.Duration `json:"-"`
 	TimeoutStr       string        `json:"timeout,omitempty"`
 	Debug            bool          `json:"debug,omitempty"`
 	DryRun           bool          `json:"-"`
 	ConfigPath       string        `json:"-"`
+	LocalContextPath string        `json:"-"`
 	configFileLoaded bool
 }
 
@@ -47,6 +50,10 @@ func Load(flags *Flags) (*Config, error) {
 		return nil, err
 	}
 
+	if err := cfg.loadFromLocalContext(); err != nil {
+		return nil, err
+	}
+
 	cfg.loadFromEnv()
 
 	if flags != nil {
@@ -54,6 +61,26 @@ func Load(flags *Flags) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func (c *Config) loadFromLocalContext() error {
+	ctx, err := LoadLocalContext()
+	if err != nil {
+		return err
+	}
+
+	c.LocalContextPath = ctx.Path()
+
+	if ctx.Workspace != "" {
+		c.Workspace = ctx.Workspace
+	}
+	if ctx.Project != "" {
+		c.Project = ctx.Project
+	}
+	if ctx.Task != "" {
+		c.Task = ctx.Task
+	}
+	return nil
 }
 
 func (c *Config) loadFromFile(path string) error {

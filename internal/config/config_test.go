@@ -137,3 +137,101 @@ func TestExpandPath(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadIntegratesLocalContext(t *testing.T) {
+	tmp := t.TempDir()
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Chdir(oldWd) }()
+
+	contextContent := `{"workspace": "local-ws", "project": "local-proj", "task": "local-task"}`
+	if err := os.WriteFile(filepath.Join(tmp, LocalContextFile), []byte(contextContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.Chdir(tmp); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("ASANA_ACCESS_TOKEN", "")
+	t.Setenv("ASANA_WORKSPACE", "")
+
+	cfg, err := Load(nil)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if cfg.Workspace != "local-ws" {
+		t.Errorf("Workspace = %q, want %q", cfg.Workspace, "local-ws")
+	}
+	if cfg.Project != "local-proj" {
+		t.Errorf("Project = %q, want %q", cfg.Project, "local-proj")
+	}
+	if cfg.Task != "local-task" {
+		t.Errorf("Task = %q, want %q", cfg.Task, "local-task")
+	}
+	if cfg.LocalContextPath == "" {
+		t.Error("LocalContextPath should be set")
+	}
+}
+
+func TestLoadPrecedence_EnvOverridesLocalContext(t *testing.T) {
+	tmp := t.TempDir()
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Chdir(oldWd) }()
+
+	contextContent := `{"workspace": "local-ws"}`
+	if err := os.WriteFile(filepath.Join(tmp, LocalContextFile), []byte(contextContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.Chdir(tmp); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("ASANA_WORKSPACE", "env-ws")
+
+	cfg, err := Load(nil)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if cfg.Workspace != "env-ws" {
+		t.Errorf("Workspace = %q, want %q (env should override local)", cfg.Workspace, "env-ws")
+	}
+}
+
+func TestLoadPrecedence_FlagsOverrideAll(t *testing.T) {
+	tmp := t.TempDir()
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Chdir(oldWd) }()
+
+	contextContent := `{"workspace": "local-ws"}`
+	if err := os.WriteFile(filepath.Join(tmp, LocalContextFile), []byte(contextContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.Chdir(tmp); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("ASANA_WORKSPACE", "env-ws")
+
+	flags := &Flags{Workspace: "flag-ws"}
+	cfg, err := Load(flags)
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+
+	if cfg.Workspace != "flag-ws" {
+		t.Errorf("Workspace = %q, want %q (flags should override all)", cfg.Workspace, "flag-ws")
+	}
+}
