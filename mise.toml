@@ -1,0 +1,32 @@
+[tasks.build]
+description = "Build the binary"
+run = """
+VERSION="${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo dev)}"
+go build -ldflags "-X main.version=$VERSION" -o asana ./cmd/asana
+"""
+
+[tasks.test]
+description = "Run tests"
+run = "go test -race -v ./..."
+
+[tasks.lint]
+description = "Run linter"
+run = "golangci-lint run"
+
+[tasks.clean]
+description = "Clean build artifacts"
+run = """
+rm -f asana
+go clean -testcache
+"""
+
+[tasks.install]
+description = "Install the binary"
+run = """
+VERSION="${VERSION:-$(git describe --tags --always --dirty 2>/dev/null || echo dev)}"
+go install -ldflags "-X main.version=$VERSION" ./cmd/asana
+"""
+
+[tasks.check]
+description = "Run all checks (lint + test)"
+depends = ["lint", "test"]
