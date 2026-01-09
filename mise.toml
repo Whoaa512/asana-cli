@@ -30,3 +30,7 @@ go install -ldflags "-X main.version=$VERSION" ./cmd/asana
 [tasks.check]
 description = "Run all checks (lint + test)"
 depends = ["lint", "test"]
+
+[tasks.release]
+description = "Create a new release with binaries"
+run = "bash scripts/release.sh"
