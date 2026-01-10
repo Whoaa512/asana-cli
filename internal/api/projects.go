@@ -1,7 +1,9 @@
 package api
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/whoaa512/asana-cli/internal/models"
@@ -55,6 +57,27 @@ func (c *HTTPClient) GetProject(ctx context.Context, gid string) (*models.Projec
 	}
 
 	if err := c.get(ctx, "/projects/"+gid, &response); err != nil {
+		return nil, err
+	}
+
+	return &response.Data, nil
+}
+
+func (c *HTTPClient) CreateProject(ctx context.Context, req models.ProjectCreateRequest) (*models.Project, error) {
+	payload := struct {
+		Data models.ProjectCreateRequest `json:"data"`
+	}{Data: req}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode request: %w", err)
+	}
+
+	var response struct {
+		Data models.Project `json:"data"`
+	}
+
+	if err := c.post(ctx, "/projects", bytes.NewReader(body), &response); err != nil {
 		return nil, err
 	}
 

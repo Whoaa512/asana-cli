@@ -8,3 +8,11 @@ type Project struct {
 	Notes     string         `json:"notes,omitempty"`
 	Workspace *AsanaResource `json:"workspace,omitempty"`
 }
+
+type ProjectCreateRequest struct {
+	Name      string `json:"name"`
+	Workspace string `json:"workspace,omitempty"`
+	Team      string `json:"team,omitempty"`
+	Notes     string `json:"notes,omitempty"`
+	Color     string `json:"color,omitempty"`
+}

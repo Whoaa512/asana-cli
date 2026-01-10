@@ -27,6 +27,7 @@ type Client interface {
 
 	ListProjects(ctx context.Context, opts ProjectListOptions) (*models.ListResponse[models.Project], error)
 	GetProject(ctx context.Context, gid string) (*models.Project, error)
+	CreateProject(ctx context.Context, req models.ProjectCreateRequest) (*models.Project, error)
 
 	ListSections(ctx context.Context, opts SectionListOptions) (*models.ListResponse[models.Section], error)
 	GetSection(ctx context.Context, gid string) (*models.Section, error)
