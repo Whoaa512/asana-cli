@@ -139,8 +139,12 @@ func runProjectCreate(_ *cobra.Command, _ []string) error {
 		Notes: projectCreateNotes,
 		Color: projectCreateColor,
 	}
-	if projectCreateTeam != "" {
-		req.Team = projectCreateTeam
+	team := projectCreateTeam
+	if team == "" {
+		team = cfg.Team
+	}
+	if team != "" {
+		req.Team = team
 	} else {
 		req.Workspace = cfg.Workspace
 	}

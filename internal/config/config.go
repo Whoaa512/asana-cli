@@ -16,6 +16,7 @@ const (
 type Config struct {
 	AccessToken      string        `json:"-"`
 	Workspace        string        `json:"default_workspace,omitempty"`
+	Team             string        `json:"default_team,omitempty"`
 	Project          string        `json:"-"`
 	Task             string        `json:"-"`
 	Timeout          time.Duration `json:"-"`
@@ -91,6 +92,7 @@ func (c *Config) loadFromFile(path string) error {
 
 	var fileConfig struct {
 		DefaultWorkspace string `json:"default_workspace"`
+		DefaultTeam      string `json:"default_team"`
 		Timeout          string `json:"timeout"`
 		Debug            bool   `json:"debug"`
 	}
@@ -101,6 +103,9 @@ func (c *Config) loadFromFile(path string) error {
 
 	if fileConfig.DefaultWorkspace != "" {
 		c.Workspace = fileConfig.DefaultWorkspace
+	}
+	if fileConfig.DefaultTeam != "" {
+		c.Team = fileConfig.DefaultTeam
 	}
 	if fileConfig.Timeout != "" {
 		if d, err := time.ParseDuration(fileConfig.Timeout); err == nil {
