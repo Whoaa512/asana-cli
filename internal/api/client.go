@@ -38,4 +38,5 @@ type Client interface {
 	GetTag(ctx context.Context, gid string) (*models.Tag, error)
 
 	ListTeams(ctx context.Context, opts TeamListOptions) (*models.ListResponse[models.Team], error)
+	ListUserTeams(ctx context.Context, opts UserTeamListOptions) (*models.ListResponse[models.Team], error)
 }
