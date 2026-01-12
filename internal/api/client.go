@@ -25,6 +25,11 @@ type Client interface {
 	ListSubtasks(ctx context.Context, taskGID string, limit int, offset string) (*models.ListResponse[models.Task], error)
 	AddSubtask(ctx context.Context, parentGID string, name string) (*models.Task, error)
 
+	ListDependencies(ctx context.Context, taskGID string) ([]models.Task, error)
+	ListDependents(ctx context.Context, taskGID string) ([]models.Task, error)
+	AddDependency(ctx context.Context, taskGID string, dependsOnGID string) error
+	RemoveDependency(ctx context.Context, taskGID string, dependsOnGID string) error
+
 	ListProjects(ctx context.Context, opts ProjectListOptions) (*models.ListResponse[models.Project], error)
 	GetProject(ctx context.Context, gid string) (*models.Project, error)
 	CreateProject(ctx context.Context, req models.ProjectCreateRequest) (*models.Project, error)
