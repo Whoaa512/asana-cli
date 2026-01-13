@@ -2,6 +2,15 @@
 
 A CLI for Asana, designed for AI agents and automation. JSON output only, context-aware, session-based work logging.
 
+## Installation
+
+```bash
+# Install via go install (requires Go 1.21+)
+go install github.com/whoaa512/asana-cli/cmd/asana@latest
+```
+
+Or download a pre-built binary from the [releases page](https://github.com/Whoaa512/asana-cli/releases).
+
 ## Quick Start
 
 ```bash
@@ -10,11 +19,7 @@ A CLI for Asana, designed for AI agents and automation. JSON output only, contex
 # 2. Set the token
 export ASANA_ACCESS_TOKEN="1/1234567890:abcdef..."
 
-# 3. Build and install
-mise run build
-# or: go install ./cmd/asana
-
-# 4. Verify it works
+# 3. Verify it works
 asana me
 ```
 
