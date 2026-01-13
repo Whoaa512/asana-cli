@@ -44,4 +44,6 @@ type Client interface {
 
 	ListTeams(ctx context.Context, opts TeamListOptions) (*models.ListResponse[models.Team], error)
 	ListUserTeams(ctx context.Context, opts UserTeamListOptions) (*models.ListResponse[models.Team], error)
+
+	SearchTasks(ctx context.Context, opts SearchTasksOptions) (*models.ListResponse[models.Task], error)
 }
