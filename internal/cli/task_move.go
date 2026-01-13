@@ -31,6 +31,13 @@ var taskBlockCmd = &cobra.Command{
 	RunE:  runTaskBlock,
 }
 
+var taskPlanCmd = &cobra.Command{
+	Use:   "plan <task-gid>",
+	Short: "Move task to planning section",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runTaskPlan,
+}
+
 var (
 	taskMoveSection string
 )
@@ -39,6 +46,7 @@ func init() {
 	taskCmd.AddCommand(taskMoveCmd)
 	taskCmd.AddCommand(taskStartCmd)
 	taskCmd.AddCommand(taskBlockCmd)
+	taskCmd.AddCommand(taskPlanCmd)
 
 	taskMoveCmd.Flags().StringVar(&taskMoveSection, "section", "", "Section GID (required)")
 	if err := taskMoveCmd.MarkFlagRequired("section"); err != nil {
@@ -129,4 +137,34 @@ func runTaskBlock(_ *cobra.Command, args []string) error {
 
 	out := output.NewJSON(os.Stdout)
 	return out.Print(map[string]any{"success": true, "task": taskGID, "section": sectionGID, "section_name": "blocked"})
+}
+
+func runTaskPlan(_ *cobra.Command, args []string) error {
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
+	if err := requireAuth(cfg); err != nil {
+		return err
+	}
+
+	if cfg.Sections == nil || cfg.Sections["planning"] == "" {
+		return errors.NewGeneralError("planning section not configured in .asana.json", nil)
+	}
+
+	taskGID := args[0]
+	sectionGID := cfg.Sections["planning"]
+
+	if cfg.DryRun {
+		out := output.NewJSON(os.Stdout)
+		return out.Print(map[string]any{"dry_run": true, "task": taskGID, "section": sectionGID, "section_name": "planning"})
+	}
+
+	client := newClient(cfg)
+	if err := client.AddTaskToSection(context.Background(), sectionGID, taskGID); err != nil {
+		return err
+	}
+
+	out := output.NewJSON(os.Stdout)
+	return out.Print(map[string]any{"success": true, "task": taskGID, "section": sectionGID, "section_name": "planning"})
 }
