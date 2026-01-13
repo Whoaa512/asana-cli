@@ -92,6 +92,14 @@ func runPrime(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	if primeIncludeCompleted {
+		completedTasks, err := fetchCompletedTasks(client, project, primeLimit)
+		if err != nil {
+			return err
+		}
+		writeCompletedTasks(&output, completedTasks)
+	}
+
 	fmt.Print(output.String())
 	return nil
 }
@@ -260,4 +268,36 @@ func truncate(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen] + "..."
+}
+
+func fetchCompletedTasks(client api.Client, project string, limit int) ([]models.Task, error) {
+	completed := true
+	opts := api.TaskListOptions{
+		Project:   project,
+		Completed: &completed,
+		Limit:     limit,
+	}
+
+	result, err := client.ListTasks(context.Background(), opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return result.Data, nil
+}
+
+func writeCompletedTasks(output *strings.Builder, tasks []models.Task) {
+	if len(tasks) == 0 {
+		return
+	}
+
+	output.WriteString("## Recently Completed\n")
+	for _, task := range tasks {
+		completedOn := ""
+		if task.CompletedAt != "" {
+			completedOn = fmt.Sprintf(" - completed %s", task.CompletedAt[:10])
+		}
+		output.WriteString(fmt.Sprintf("- [x] %s (%s)%s\n", task.Name, task.GID, completedOn))
+	}
+	output.WriteString("\n")
 }

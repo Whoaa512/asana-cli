@@ -1,15 +1,16 @@
 package models
 
 type Task struct {
-	GID       string          `json:"gid"`
-	Name      string          `json:"name"`
-	Notes     string          `json:"notes,omitempty"`
-	Completed bool            `json:"completed"`
-	DueOn     string          `json:"due_on,omitempty"`
-	Assignee  *AsanaResource  `json:"assignee,omitempty"`
-	Projects  []AsanaResource `json:"projects,omitempty"`
-	Parent    *AsanaResource  `json:"parent,omitempty"`
-	Tags      []AsanaResource `json:"tags,omitempty"`
+	GID         string          `json:"gid"`
+	Name        string          `json:"name"`
+	Notes       string          `json:"notes,omitempty"`
+	Completed   bool            `json:"completed"`
+	CompletedAt string          `json:"completed_at,omitempty"`
+	DueOn       string          `json:"due_on,omitempty"`
+	Assignee    *AsanaResource  `json:"assignee,omitempty"`
+	Projects    []AsanaResource `json:"projects,omitempty"`
+	Parent      *AsanaResource  `json:"parent,omitempty"`
+	Tags        []AsanaResource `json:"tags,omitempty"`
 }
 
 type TaskCreateRequest struct {
