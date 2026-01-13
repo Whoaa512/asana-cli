@@ -9,9 +9,10 @@ import (
 const LocalContextFile = ".asana.json"
 
 type LocalContext struct {
-	Workspace string `json:"workspace,omitempty"`
-	Project   string `json:"project,omitempty"`
-	Task      string `json:"task,omitempty"`
+	Workspace string            `json:"workspace,omitempty"`
+	Project   string            `json:"project,omitempty"`
+	Task      string            `json:"task,omitempty"`
+	Sections  map[string]string `json:"sections,omitempty"`
 	path      string
 }
 

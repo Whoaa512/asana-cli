@@ -14,17 +14,18 @@ const (
 )
 
 type Config struct {
-	AccessToken      string        `json:"-"`
-	Workspace        string        `json:"default_workspace,omitempty"`
-	Team             string        `json:"default_team,omitempty"`
-	Project          string        `json:"-"`
-	Task             string        `json:"-"`
-	Timeout          time.Duration `json:"-"`
-	TimeoutStr       string        `json:"timeout,omitempty"`
-	Debug            bool          `json:"debug,omitempty"`
-	DryRun           bool          `json:"-"`
-	ConfigPath       string        `json:"-"`
-	LocalContextPath string        `json:"-"`
+	AccessToken      string            `json:"-"`
+	Workspace        string            `json:"default_workspace,omitempty"`
+	Team             string            `json:"default_team,omitempty"`
+	Project          string            `json:"-"`
+	Task             string            `json:"-"`
+	Sections         map[string]string `json:"-"`
+	Timeout          time.Duration     `json:"-"`
+	TimeoutStr       string            `json:"timeout,omitempty"`
+	Debug            bool              `json:"debug,omitempty"`
+	DryRun           bool              `json:"-"`
+	ConfigPath       string            `json:"-"`
+	LocalContextPath string            `json:"-"`
 	configFileLoaded bool
 }
 
@@ -80,6 +81,9 @@ func (c *Config) loadFromLocalContext() error {
 	}
 	if ctx.Task != "" {
 		c.Task = ctx.Task
+	}
+	if ctx.Sections != nil {
+		c.Sections = ctx.Sections
 	}
 	return nil
 }
