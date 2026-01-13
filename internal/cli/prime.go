@@ -121,22 +121,22 @@ func writeActiveSession(output *strings.Builder, client api.Client, ctx context.
 	}
 
 	output.WriteString("## Active Session\n")
-	output.WriteString(fmt.Sprintf("Task: %s (%s)\n", task.Name, sess.TaskGID))
-	output.WriteString(fmt.Sprintf("Started: %s ago\n", sess.FormatDuration()))
+	fmt.Fprintf(output, "Task: %s (%s)\n", task.Name, sess.TaskGID)
+	fmt.Fprintf(output, "Started: %s ago\n", sess.FormatDuration())
 
 	if sess.StartBranch != "" {
 		currentBranch := session.GetCurrentBranch()
 		if currentBranch != "" && currentBranch != sess.StartBranch {
-			output.WriteString(fmt.Sprintf("Branch: %s → %s\n", sess.StartBranch, currentBranch))
+			fmt.Fprintf(output, "Branch: %s → %s\n", sess.StartBranch, currentBranch)
 		} else {
-			output.WriteString(fmt.Sprintf("Branch: %s\n", sess.StartBranch))
+			fmt.Fprintf(output, "Branch: %s\n", sess.StartBranch)
 		}
 	}
 
 	if len(sess.Logs) > 0 {
 		output.WriteString("Progress logs:\n")
 		for _, log := range sess.Logs {
-			output.WriteString(fmt.Sprintf("- [%s] %s\n", log.Timestamp.Local().Format("15:04"), log.Text))
+			fmt.Fprintf(output, "- [%s] %s\n", log.Timestamp.Local().Format("15:04"), log.Text)
 		}
 	}
 
@@ -154,10 +154,10 @@ func writeActiveSession(output *strings.Builder, client api.Client, ctx context.
 					if story.CreatedBy != nil {
 						by = story.CreatedBy.Name
 					}
-					output.WriteString(fmt.Sprintf("- [%s] %s: %s\n",
+					fmt.Fprintf(output, "- [%s] %s: %s\n",
 						createdAt.Local().Format("15:04"),
 						by,
-						truncate(story.Text, 100)))
+						truncate(story.Text, 100))
 				}
 			}
 		}
@@ -181,7 +181,7 @@ func writeReadyTasks(output *strings.Builder, client api.Client, ctx context.Con
 		if task.DueOn != "" {
 			dueStr = fmt.Sprintf(" - due %s", task.DueOn)
 		}
-		output.WriteString(fmt.Sprintf("- [ ] %s (%s)%s\n", task.Name, task.GID, dueStr))
+		fmt.Fprintf(output, "- [ ] %s (%s)%s\n", task.Name, task.GID, dueStr)
 
 		subtasks, err := client.ListSubtasks(ctx, task.GID, 50, "")
 		if err == nil && len(subtasks.Data) > 0 {
@@ -190,7 +190,7 @@ func writeReadyTasks(output *strings.Builder, client api.Client, ctx context.Con
 				if subtask.Completed {
 					checkbox = "[x]"
 				}
-				output.WriteString(fmt.Sprintf("  - %s %s\n", checkbox, subtask.Name))
+				fmt.Fprintf(output, "  - %s %s\n", checkbox, subtask.Name)
 			}
 		}
 	}
@@ -221,7 +221,7 @@ func writeBlockedTasks(output *strings.Builder, client api.Client, ctx context.C
 		if len(blockers) > 0 {
 			blockStr = fmt.Sprintf(" - blocked by: %s", strings.Join(blockers, ", "))
 		}
-		output.WriteString(fmt.Sprintf("- [ ] %s (%s)%s\n", task.Name, task.GID, blockStr))
+		fmt.Fprintf(output, "- [ ] %s (%s)%s\n", task.Name, task.GID, blockStr)
 
 		subtasks, err := client.ListSubtasks(ctx, task.GID, 50, "")
 		if err == nil && len(subtasks.Data) > 0 {
@@ -230,7 +230,7 @@ func writeBlockedTasks(output *strings.Builder, client api.Client, ctx context.C
 				if subtask.Completed {
 					checkbox = "[x]"
 				}
-				output.WriteString(fmt.Sprintf("  - %s %s\n", checkbox, subtask.Name))
+				fmt.Fprintf(output, "  - %s %s\n", checkbox, subtask.Name)
 			}
 		}
 	}
@@ -297,7 +297,7 @@ func writeCompletedTasks(output *strings.Builder, tasks []models.Task) {
 		if task.CompletedAt != "" {
 			completedOn = fmt.Sprintf(" - completed %s", task.CompletedAt[:10])
 		}
-		output.WriteString(fmt.Sprintf("- [x] %s (%s)%s\n", task.Name, task.GID, completedOn))
+		fmt.Fprintf(output, "- [x] %s (%s)%s\n", task.Name, task.GID, completedOn)
 	}
 	output.WriteString("\n")
 }
