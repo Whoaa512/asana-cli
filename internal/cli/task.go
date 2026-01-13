@@ -288,18 +288,29 @@ func runTaskComplete(_ *cobra.Command, args []string) error {
 		return err
 	}
 
+	taskGID := args[0]
 	completed := true
 	req := models.TaskUpdateRequest{Completed: &completed}
 
 	if cfg.DryRun {
 		out := output.NewJSON(os.Stdout)
-		return out.Print(map[string]any{"dry_run": true, "gid": args[0], "action": "complete"})
+		result := map[string]any{"dry_run": true, "gid": taskGID, "action": "complete"}
+		if cfg.Sections != nil && cfg.Sections["done"] != "" {
+			result["move_to_section"] = cfg.Sections["done"]
+		}
+		return out.Print(result)
 	}
 
 	client := newClient(cfg)
-	task, err := client.UpdateTask(context.Background(), args[0], req)
+	task, err := client.UpdateTask(context.Background(), taskGID, req)
 	if err != nil {
 		return err
+	}
+
+	if cfg.Sections != nil && cfg.Sections["done"] != "" {
+		if err := client.AddTaskToSection(context.Background(), cfg.Sections["done"], taskGID); err != nil {
+			return err
+		}
 	}
 
 	out := output.NewJSON(os.Stdout)
