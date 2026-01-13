@@ -48,6 +48,51 @@ asana me
 
 Context resolution order: CLI flags > `.asana.json` > global config > env vars
 
+### CLAUDE.md Instruction Set
+
+Here's the instruction block for your global CLAUDE.md (modeled after [Beads](https://github.com/steveyegge/beads)):
+Add .asana.json and .asana-cli/ to .gitignore.
+
+### Asana (Personal Task Tracker)
+> For cross-repo work tracking via personal Asana. Configure sections in `.asana.json`.
+
+```bash
+# Context setup
+asana ctx project <gid>             # Set project for this repo
+asana ctx task <gid>                # Set active task
+asana ctx show                      # View context
+
+# Core workflow
+asana prime                         # AI context dump (start of session)
+asana ready --assignee me           # Find unblocked work
+asana task start <gid>              # Claim task (move to in_progress section)
+asana log "progress note"           # Add session log
+asana done                          # Complete context task
+
+# Dependencies
+asana task dep add <task> <blocked-by>
+asana task dep list <task>
+asana task dep rm <task> <blocked-by>
+asana blocked                       # Show blocked tasks
+
+# Search & explore
+asana search "query"                # Text search
+asana task get <gid>                # Task details
+```
+
+Section config (.asana.json):
+```json
+{
+  "project": "<project-gid>",
+  "sections": {
+    "in_progress": "<section-gid>",
+    "blocked": "<section-gid>",
+    "done": "<section-gid>"
+  }
+}
+```
+
+
 ## Usage
 
 ### Find Your Workspace and Project
