@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"context"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -80,7 +79,7 @@ func filterBlockedTasks(client api.Client, tasks []models.Task) ([]models.Task, 
 	var blocked []models.Task
 
 	for _, task := range tasks {
-		hasBlockers, err := hasIncompleteDeps(client, task.GID)
+		hasBlockers, err := hasIncompleteDependencies(client, task.GID)
 		if err != nil {
 			return nil, err
 		}
@@ -91,19 +90,4 @@ func filterBlockedTasks(client api.Client, tasks []models.Task) ([]models.Task, 
 	}
 
 	return blocked, nil
-}
-
-func hasIncompleteDeps(client api.Client, taskGID string) (bool, error) {
-	deps, err := client.ListDependencies(context.Background(), taskGID)
-	if err != nil {
-		return false, err
-	}
-
-	for _, dep := range deps {
-		if !dep.Completed {
-			return true, nil
-		}
-	}
-
-	return false, nil
 }
