@@ -85,6 +85,7 @@ Section config (.asana.json):
 {
   "project": "<project-gid>",
   "sections": {
+    "planning": "<section-gid>",
     "in_progress": "<section-gid>",
     "blocked": "<section-gid>",
     "done": "<section-gid>"
@@ -114,9 +115,6 @@ asana section list --project <project-gid>
 # Create a task
 asana task create --name "Fix bug in auth" --project <project-gid>
 
-# Create with section placement
-asana task create --name "New feature" --project <gid> --section <section-gid>
-
 # Create a subtask
 asana task create --name "Subtask" --parent <parent-task-gid>
 
@@ -128,13 +126,18 @@ asana task list --project <gid> --completed false --limit 20
 asana task get <task-gid>
 
 # Update a task
-asana task update <task-gid> --name "New name" --due 2024-12-31
+asana task update <task-gid> --name "New name" --due-on 2024-12-31
 
 # Complete a task
 asana task complete <task-gid>
 
+# Move task to a section
+asana task move <task-gid> --section <section-gid>
+asana task start <task-gid>   # Move to in_progress section
+asana task block <task-gid>   # Move to blocked section
+
 # Add a comment
-asana task comment <task-gid> --text "Status update here"
+asana task comment add <task-gid> --text "Status update here"
 
 # Delete a task
 asana task delete <task-gid>
@@ -172,7 +175,7 @@ Track work across agent invocations:
 
 ```bash
 # Start a session (links to a task)
-asana session start --task <task-gid>
+asana session start <task-gid>
 
 # Log progress as you work
 asana log "Implemented parsing logic"
@@ -203,37 +206,63 @@ asana note <text>   # → asana task comment <context-task> --text <text>
 
 ```
 asana
+├── prime         --project --limit --include-completed    # AI context dump
+├── ready         --project --assignee --limit             # Find unblocked tasks
+├── blocked       --project --assignee --limit             # Show blocked tasks
+├── search        <query> --project --assignee --completed --limit --offset
+├── done                                                   # Complete context task
+├── log           <text> [--type]                          # Session log alias
+├── note          <text>                                   # Task comment alias
+│
 ├── task
-│   ├── create    --name --project --section --assignee --due --notes [--parent]
+│   ├── create    --name --project --assignee --due-on --notes [--parent]
 │   ├── get       <gid>
-│   ├── list      --project --section --assignee --tag --completed --limit
-│   ├── update    <gid> --name --assignee --due --notes --completed
-│   ├── delete    <gid> [--force]
+│   ├── list      --project --section --assignee --tag --completed --limit --offset
+│   ├── update    <gid> --name --assignee --due-on --notes
+│   ├── delete    <gid>
 │   ├── complete  <gid>
 │   ├── assign    <gid> <assignee>
-│   └── comment   <gid> --text
+│   ├── move      <gid> --section (required)
+│   ├── start     <gid>                                    # Move to in_progress
+│   ├── block     <gid>                                    # Move to blocked
+│   ├── plan      <gid>                                    # Move to planning
+│   ├── subtask
+│   │   ├── list  <task_gid> --limit --offset
+│   │   └── add   <task_gid> --name
+│   ├── comment
+│   │   ├── list  <task_gid> --limit --offset
+│   │   └── add   <task_gid> --text
+│   └── dep
+│       ├── add   <task_gid> <depends_on_gid>
+│       ├── list  <task_gid>
+│       └── rm    <task_gid> <depends_on_gid>
 │
 ├── project
-│   ├── list      --workspace --team --archived --limit
-│   └── get       <gid>
+│   ├── list      --archived --limit --offset
+│   ├── get       <gid>
+│   └── create    --name --notes --color --team
 │
 ├── section
-│   ├── list      --project --limit
+│   ├── list      --project --limit --offset
 │   ├── get       <gid>
 │   ├── create    --project --name
 │   └── add-task  <section-gid> <task-gid>
 │
 ├── workspace
-│   ├── list
+│   ├── list      --limit
 │   ├── get       <gid>
 │   └── use       <gid> [--global]
 │
 ├── tag
-│   ├── list      --workspace --limit
+│   ├── list      --limit --offset
 │   └── get       <gid>
 │
+├── team
+│   ├── list      --limit --offset
+│   └── me        --limit --offset
+│
 ├── session
-│   ├── start     [--task <gid>] [--project <gid>] [--force]
+│   ├── start     [<task-gid>] [--force]
 │   ├── end       [--summary <text>] [--discard]
 │   ├── status
 │   └── log       <text> [--type progress|decision|blocker]
@@ -249,6 +278,7 @@ asana
 │   └── init
 │
 ├── me
+│   └── teams     --limit --offset
 │
 └── version
 ```
@@ -258,6 +288,7 @@ asana
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
 | `--workspace` | `-w` | from config | Override workspace GID |
+| `--config` | | `~/.config/asana-cli/config.json` | Config file path |
 | `--debug` | | `false` | Print HTTP requests/responses |
 | `--dry-run` | | `false` | Preview without executing |
 | `--timeout` | | `30s` | HTTP timeout |
@@ -323,12 +354,7 @@ Now commands in that repo auto-use that project.
 
 **Q: Can a task be in multiple projects?**
 
-Yes, this is called "multi-homing". Create in one project, then add to another:
-```bash
-asana task create --name "Task" --project <project-a>
-# Get the task GID from output, then:
-asana task update <task-gid> --add-project <project-b>
-```
+Yes, Asana calls this "multi-homing". This CLI doesn't support adding tasks to multiple projects directly - use the Asana web UI or API for that.
 
 **Q: How do sessions work?**
 
