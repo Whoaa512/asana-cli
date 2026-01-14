@@ -33,6 +33,9 @@ type Client interface {
 	AddFollowers(ctx context.Context, taskGID string, followers []string) (*models.Task, error)
 	RemoveFollower(ctx context.Context, taskGID string, followerGID string) (*models.Task, error)
 
+	AddTag(ctx context.Context, taskGID string, tagGID string) (*models.Task, error)
+	RemoveTag(ctx context.Context, taskGID string, tagGID string) (*models.Task, error)
+
 	ListProjects(ctx context.Context, opts ProjectListOptions) (*models.ListResponse[models.Project], error)
 	GetProject(ctx context.Context, gid string) (*models.Project, error)
 	CreateProject(ctx context.Context, req models.ProjectCreateRequest) (*models.Project, error)

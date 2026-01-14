@@ -121,3 +121,111 @@ func TestRemoveFollower(t *testing.T) {
 		t.Errorf("task.Name = %q, want %q", task.Name, "Test Task")
 	}
 }
+
+func TestAddTag(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/tasks/12345/addTag" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		if r.Method != http.MethodPost {
+			t.Errorf("unexpected method: %s", r.Method)
+		}
+
+		var req struct {
+			Data struct {
+				Tag string `json:"tag"`
+			} `json:"data"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
+
+		if req.Data.Tag != "tag1" {
+			t.Errorf("unexpected tag: %s", req.Data.Tag)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
+				"gid":  "12345",
+				"name": "Test Task",
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}))
+	defer server.Close()
+
+	cfg := &config.Config{
+		AccessToken: "test-token",
+		Timeout:     5 * time.Second,
+	}
+	client := NewHTTPClient(cfg, WithBaseURL(server.URL))
+
+	task, err := client.AddTag(context.Background(), "12345", "tag1")
+	if err != nil {
+		t.Fatalf("AddTag() error = %v", err)
+	}
+
+	if task.GID != "12345" {
+		t.Errorf("task.GID = %q, want %q", task.GID, "12345")
+	}
+	if task.Name != "Test Task" {
+		t.Errorf("task.Name = %q, want %q", task.Name, "Test Task")
+	}
+}
+
+func TestRemoveTag(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/tasks/12345/removeTag" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		if r.Method != http.MethodPost {
+			t.Errorf("unexpected method: %s", r.Method)
+		}
+
+		var req struct {
+			Data struct {
+				Tag string `json:"tag"`
+			} `json:"data"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
+
+		if req.Data.Tag != "tag1" {
+			t.Errorf("unexpected tag: %s", req.Data.Tag)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
+				"gid":  "12345",
+				"name": "Test Task",
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}))
+	defer server.Close()
+
+	cfg := &config.Config{
+		AccessToken: "test-token",
+		Timeout:     5 * time.Second,
+	}
+	client := NewHTTPClient(cfg, WithBaseURL(server.URL))
+
+	task, err := client.RemoveTag(context.Background(), "12345", "tag1")
+	if err != nil {
+		t.Fatalf("RemoveTag() error = %v", err)
+	}
+
+	if task.GID != "12345" {
+		t.Errorf("task.GID = %q, want %q", task.GID, "12345")
+	}
+	if task.Name != "Test Task" {
+		t.Errorf("task.Name = %q, want %q", task.Name, "Test Task")
+	}
+}
