@@ -25,6 +25,7 @@ type Client interface {
 
 	ListSubtasks(ctx context.Context, taskGID string, limit int, offset string) (*models.ListResponse[models.Task], error)
 	AddSubtask(ctx context.Context, parentGID string, name string) (*models.Task, error)
+	SetParent(ctx context.Context, taskGID string, parentGID *string) (*models.Task, error)
 
 	ListDependencies(ctx context.Context, taskGID string) ([]models.Task, error)
 	ListDependents(ctx context.Context, taskGID string) ([]models.Task, error)
@@ -51,6 +52,7 @@ type Client interface {
 
 	ListTags(ctx context.Context, opts TagListOptions) (*models.ListResponse[models.Tag], error)
 	GetTag(ctx context.Context, gid string) (*models.Tag, error)
+	CreateTag(ctx context.Context, req TagCreateRequest) (*models.Tag, error)
 
 	ListTeams(ctx context.Context, opts TeamListOptions) (*models.ListResponse[models.Team], error)
 	ListUserTeams(ctx context.Context, opts UserTeamListOptions) (*models.ListResponse[models.Team], error)
