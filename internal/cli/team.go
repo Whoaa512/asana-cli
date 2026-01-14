@@ -31,6 +31,13 @@ var teamMeCmd = &cobra.Command{
 	RunE:  runTeamMe,
 }
 
+var teamGetCmd = &cobra.Command{
+	Use:   "get <gid>",
+	Short: "Get team details",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runTeamGet,
+}
+
 var (
 	teamListLimit  int
 	teamListOffset string
@@ -42,6 +49,7 @@ func init() {
 	rootCmd.AddCommand(teamCmd)
 	teamCmd.AddCommand(teamListCmd)
 	teamCmd.AddCommand(teamMeCmd)
+	teamCmd.AddCommand(teamGetCmd)
 
 	teamListCmd.Flags().IntVar(&teamListLimit, "limit", 50, "Max results to return")
 	teamListCmd.Flags().StringVar(&teamListOffset, "offset", "", "Pagination offset")
@@ -107,4 +115,23 @@ func runTeamMe(_ *cobra.Command, _ []string) error {
 
 	out := output.NewJSON(os.Stdout)
 	return out.Print(result)
+}
+
+func runTeamGet(_ *cobra.Command, args []string) error {
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
+	if err := requireAuth(cfg); err != nil {
+		return err
+	}
+
+	client := newClient(cfg)
+	team, err := client.GetTeam(context.Background(), args[0])
+	if err != nil {
+		return err
+	}
+
+	out := output.NewJSON(os.Stdout)
+	return out.Print(team)
 }

@@ -40,6 +40,7 @@ type Client interface {
 
 	AddToProject(ctx context.Context, taskGID string, projectGID string) (*models.Task, error)
 	RemoveFromProject(ctx context.Context, taskGID string, projectGID string) (*models.Task, error)
+	ListTaskProjects(ctx context.Context, taskGID string) ([]models.AsanaResource, error)
 
 	ListProjects(ctx context.Context, opts ProjectListOptions) (*models.ListResponse[models.Project], error)
 	GetProject(ctx context.Context, gid string) (*models.Project, error)
@@ -59,6 +60,7 @@ type Client interface {
 
 	ListTeams(ctx context.Context, opts TeamListOptions) (*models.ListResponse[models.Team], error)
 	ListUserTeams(ctx context.Context, opts UserTeamListOptions) (*models.ListResponse[models.Team], error)
+	GetTeam(ctx context.Context, gid string) (*models.Team, error)
 
 	SearchTasks(ctx context.Context, opts SearchTasksOptions) (*models.ListResponse[models.Task], error)
 }

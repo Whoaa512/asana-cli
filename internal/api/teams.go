@@ -82,3 +82,15 @@ func (c *HTTPClient) ListUserTeams(ctx context.Context, opts UserTeamListOptions
 		NextPage: response.NextPage,
 	}, nil
 }
+
+func (c *HTTPClient) GetTeam(ctx context.Context, gid string) (*models.Team, error) {
+	var response struct {
+		Data models.Team `json:"data"`
+	}
+
+	if err := c.get(ctx, "/teams/"+gid, &response); err != nil {
+		return nil, err
+	}
+
+	return &response.Data, nil
+}

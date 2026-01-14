@@ -297,3 +297,40 @@ func (c *HTTPClient) DuplicateTask(ctx context.Context, taskGID string, req Task
 
 	return &response.Data, nil
 }
+
+func (c *HTTPClient) SetParent(ctx context.Context, taskGID string, parentGID *string) (*models.Task, error) {
+	payload := struct {
+		Data struct {
+			Parent *string `json:"parent"`
+		} `json:"data"`
+	}{Data: struct {
+		Parent *string `json:"parent"`
+	}{Parent: parentGID}}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode request: %w", err)
+	}
+
+	var response struct {
+		Data models.Task `json:"data"`
+	}
+
+	if err := c.post(ctx, fmt.Sprintf("/tasks/%s/setParent", taskGID), bytes.NewReader(body), &response); err != nil {
+		return nil, err
+	}
+
+	return &response.Data, nil
+}
+
+func (c *HTTPClient) ListTaskProjects(ctx context.Context, taskGID string) ([]models.AsanaResource, error) {
+	var response struct {
+		Data []models.AsanaResource `json:"data"`
+	}
+
+	if err := c.get(ctx, fmt.Sprintf("/tasks/%s/projects", taskGID), &response); err != nil {
+		return nil, err
+	}
+
+	return response.Data, nil
+}

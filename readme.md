@@ -231,16 +231,28 @@ asana
 │   ├── start     <gid>                                    # Move to in_progress
 │   ├── block     <gid>                                    # Move to blocked
 │   ├── plan      <gid>                                    # Move to planning
+│   ├── duplicate <gid> [--name] [--include-subtasks] [--include-attachments]
+│   ├── set-parent <gid> <parent_gid> | --clear            # Reparent or make top-level
 │   ├── subtask
 │   │   ├── list  <task_gid> --limit --offset
 │   │   └── add   <task_gid> --name
 │   ├── comment
 │   │   ├── list  <task_gid> --limit --offset
 │   │   └── add   <task_gid> --text
-│   └── dep
-│       ├── add   <task_gid> <depends_on_gid>
-│       ├── list  <task_gid>
-│       └── rm    <task_gid> <depends_on_gid>
+│   ├── dep
+│   │   ├── add   <task_gid> <depends_on_gid>
+│   │   ├── list  <task_gid>
+│   │   └── rm    <task_gid> <depends_on_gid>
+│   ├── follower
+│   │   ├── add   <task_gid> <follower_gid>
+│   │   └── rm    <task_gid> <follower_gid>
+│   ├── tag
+│   │   ├── add   <task_gid> <tag_gid>
+│   │   └── rm    <task_gid> <tag_gid>
+│   └── project
+│       ├── list  <task_gid>                               # List projects task belongs to
+│       ├── add   <task_gid> <project_gid>
+│       └── rm    <task_gid> <project_gid>
 │
 ├── project
 │   ├── list      --archived --limit --offset
@@ -251,6 +263,9 @@ asana
 │   ├── list      --project --limit --offset
 │   ├── get       <gid>
 │   ├── create    --project --name
+│   ├── update    <gid> --name
+│   ├── delete    <gid>
+│   ├── insert    <section-gid> --project [--before <gid>] [--after <gid>]
 │   └── add-task  <section-gid> <task-gid>
 │
 ├── workspace
@@ -260,10 +275,12 @@ asana
 │
 ├── tag
 │   ├── list      --limit --offset
-│   └── get       <gid>
+│   ├── get       <gid>
+│   └── create    --name --workspace [--color <color>]
 │
 ├── team
 │   ├── list      --limit --offset
+│   ├── get       <gid>
 │   └── me        --limit --offset
 │
 ├── session
@@ -359,7 +376,7 @@ Now commands in that repo auto-use that project.
 
 **Q: Can a task be in multiple projects?**
 
-Yes, Asana calls this "multi-homing". This CLI doesn't support adding tasks to multiple projects directly - use the Asana web UI or API for that.
+Yes, Asana calls this "multi-homing". Use `task project add <task_gid> <project_gid>` to add a task to additional projects, and `task project list <task_gid>` to see which projects a task belongs to.
 
 **Q: How do sessions work?**
 
@@ -374,6 +391,10 @@ Great for AI agents that work across multiple invocations.
 **Q: What if I get rate limited?**
 
 The CLI auto-retries with backoff. For 429 errors, check the `Retry-After` in stderr. Avoid `--all` on large projects.
+
+**Q: What happens when I delete a section?**
+
+When you delete a section, tasks in that section are moved to the default/first section of the project. Tasks are NOT deleted. The Asana API handles this automatically.
 
 **Q: Why JSON only?**
 

@@ -395,3 +395,172 @@ func TestDuplicateTask(t *testing.T) {
 		t.Errorf("task.Name = %q, want %q", task.Name, "Copy of Test Task")
 	}
 }
+
+func TestSetParent(t *testing.T) {
+	t.Run("set parent", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/tasks/12345/setParent" {
+				t.Errorf("unexpected path: %s", r.URL.Path)
+			}
+			if r.Method != http.MethodPost {
+				t.Errorf("unexpected method: %s", r.Method)
+			}
+
+			var req struct {
+				Data struct {
+					Parent *string `json:"parent"`
+				} `json:"data"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				t.Fatalf("failed to decode request: %v", err)
+			}
+
+			if req.Data.Parent == nil || *req.Data.Parent != "99999" {
+				t.Errorf("unexpected parent: %v", req.Data.Parent)
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			err := json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"gid":  "12345",
+					"name": "Test Task",
+				},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+		}))
+		defer server.Close()
+
+		cfg := &config.Config{
+			AccessToken: "test-token",
+			Timeout:     5 * time.Second,
+		}
+		client := NewHTTPClient(cfg, WithBaseURL(server.URL))
+
+		parentGID := "99999"
+		task, err := client.SetParent(context.Background(), "12345", &parentGID)
+		if err != nil {
+			t.Fatalf("SetParent() error = %v", err)
+		}
+
+		if task.GID != "12345" {
+			t.Errorf("task.GID = %q, want %q", task.GID, "12345")
+		}
+		if task.Name != "Test Task" {
+			t.Errorf("task.Name = %q, want %q", task.Name, "Test Task")
+		}
+	})
+
+	t.Run("clear parent", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/tasks/12345/setParent" {
+				t.Errorf("unexpected path: %s", r.URL.Path)
+			}
+			if r.Method != http.MethodPost {
+				t.Errorf("unexpected method: %s", r.Method)
+			}
+
+			var req struct {
+				Data struct {
+					Parent *string `json:"parent"`
+				} `json:"data"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				t.Fatalf("failed to decode request: %v", err)
+			}
+
+			if req.Data.Parent != nil {
+				t.Errorf("expected nil parent, got: %v", req.Data.Parent)
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			err := json.NewEncoder(w).Encode(map[string]any{
+				"data": map[string]any{
+					"gid":  "12345",
+					"name": "Test Task",
+				},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+		}))
+		defer server.Close()
+
+		cfg := &config.Config{
+			AccessToken: "test-token",
+			Timeout:     5 * time.Second,
+		}
+		client := NewHTTPClient(cfg, WithBaseURL(server.URL))
+
+		task, err := client.SetParent(context.Background(), "12345", nil)
+		if err != nil {
+			t.Fatalf("SetParent() error = %v", err)
+		}
+
+		if task.GID != "12345" {
+			t.Errorf("task.GID = %q, want %q", task.GID, "12345")
+		}
+		if task.Name != "Test Task" {
+			t.Errorf("task.Name = %q, want %q", task.Name, "Test Task")
+		}
+	})
+}
+
+func TestListTaskProjects(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/tasks/12345/projects" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		if r.Method != http.MethodGet {
+			t.Errorf("unexpected method: %s", r.Method)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(map[string]any{
+			"data": []map[string]any{
+				{
+					"gid":  "proj1",
+					"name": "Project One",
+				},
+				{
+					"gid":  "proj2",
+					"name": "Project Two",
+				},
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}))
+	defer server.Close()
+
+	cfg := &config.Config{
+		AccessToken: "test-token",
+		Timeout:     5 * time.Second,
+	}
+	client := NewHTTPClient(cfg, WithBaseURL(server.URL))
+
+	projects, err := client.ListTaskProjects(context.Background(), "12345")
+	if err != nil {
+		t.Fatalf("ListTaskProjects() error = %v", err)
+	}
+
+	if len(projects) != 2 {
+		t.Fatalf("expected 2 projects, got %d", len(projects))
+	}
+
+	if projects[0].GID != "proj1" {
+		t.Errorf("projects[0].GID = %q, want %q", projects[0].GID, "proj1")
+	}
+	if projects[0].Name != "Project One" {
+		t.Errorf("projects[0].Name = %q, want %q", projects[0].Name, "Project One")
+	}
+
+	if projects[1].GID != "proj2" {
+		t.Errorf("projects[1].GID = %q, want %q", projects[1].GID, "proj2")
+	}
+	if projects[1].Name != "Project Two" {
+		t.Errorf("projects[1].Name = %q, want %q", projects[1].Name, "Project Two")
+	}
+}
