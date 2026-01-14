@@ -21,6 +21,7 @@ type TaskListOptions struct {
 
 func (c *HTTPClient) ListTasks(ctx context.Context, opts TaskListOptions) (*models.ListResponse[models.Task], error) {
 	var path string
+	var isSearchEndpoint bool
 
 	if opts.Tag != "" {
 		path = fmt.Sprintf("/tags/%s/tasks", opts.Tag)
@@ -28,6 +29,7 @@ func (c *HTTPClient) ListTasks(ctx context.Context, opts TaskListOptions) (*mode
 		path = fmt.Sprintf("/projects/%s/tasks", opts.Project)
 	} else if opts.Workspace != "" {
 		path = fmt.Sprintf("/workspaces/%s/tasks/search", opts.Workspace)
+		isSearchEndpoint = true
 	} else {
 		return nil, fmt.Errorf("either project, tag, or workspace is required")
 	}
@@ -42,7 +44,11 @@ func (c *HTTPClient) ListTasks(ctx context.Context, opts TaskListOptions) (*mode
 		sep = "&"
 	}
 	if opts.Assignee != "" {
-		path += fmt.Sprintf("%sassignee=%s", sep, opts.Assignee)
+		if isSearchEndpoint {
+			path += fmt.Sprintf("%sassignee.any=%s", sep, opts.Assignee)
+		} else {
+			path += fmt.Sprintf("%sassignee=%s", sep, opts.Assignee)
+		}
 		sep = "&"
 	}
 	if opts.Completed != nil {

@@ -301,7 +301,8 @@ asana
 │
 ├── me
 │   ├── teams     --limit --offset
-│   └── projects  --limit --offset
+│   ├── projects  --limit --offset
+│   └── tasks     --limit --offset --completed
 │
 └── version
 ```
