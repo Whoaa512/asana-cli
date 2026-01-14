@@ -99,3 +99,46 @@ func (c *HTTPClient) AddTaskToSection(ctx context.Context, sectionGID string, ta
 	path := fmt.Sprintf("/sections/%s/addTask", sectionGID)
 	return c.post(ctx, path, bytes.NewReader(body), nil)
 }
+
+func (c *HTTPClient) UpdateSection(ctx context.Context, gid string, req models.SectionUpdateRequest) (*models.Section, error) {
+	payload := struct {
+		Data struct {
+			Name string `json:"name"`
+		} `json:"data"`
+	}{}
+	payload.Data.Name = req.Name
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode request: %w", err)
+	}
+
+	var response struct {
+		Data models.Section `json:"data"`
+	}
+
+	if err := c.put(ctx, "/sections/"+gid, bytes.NewReader(body), &response); err != nil {
+		return nil, err
+	}
+
+	return &response.Data, nil
+}
+
+func (c *HTTPClient) DeleteSection(ctx context.Context, gid string) error {
+	return c.delete(ctx, "/sections/"+gid)
+}
+
+func (c *HTTPClient) InsertSection(ctx context.Context, projectGID string, req models.SectionInsertRequest) error {
+	payload := struct {
+		Data models.SectionInsertRequest `json:"data"`
+	}{}
+	payload.Data = req
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to encode request: %w", err)
+	}
+
+	path := fmt.Sprintf("/projects/%s/sections/insert", projectGID)
+	return c.post(ctx, path, bytes.NewReader(body), nil)
+}
