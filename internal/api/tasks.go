@@ -221,3 +221,79 @@ func (c *HTTPClient) RemoveTag(ctx context.Context, taskGID string, tagGID strin
 
 	return &response.Data, nil
 }
+
+func (c *HTTPClient) AddToProject(ctx context.Context, taskGID string, projectGID string) (*models.Task, error) {
+	payload := struct {
+		Data struct {
+			Project string `json:"project"`
+		} `json:"data"`
+	}{Data: struct {
+		Project string `json:"project"`
+	}{Project: projectGID}}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode request: %w", err)
+	}
+
+	var response struct {
+		Data models.Task `json:"data"`
+	}
+
+	if err := c.post(ctx, fmt.Sprintf("/tasks/%s/addProject", taskGID), bytes.NewReader(body), &response); err != nil {
+		return nil, err
+	}
+
+	return &response.Data, nil
+}
+
+func (c *HTTPClient) RemoveFromProject(ctx context.Context, taskGID string, projectGID string) (*models.Task, error) {
+	payload := struct {
+		Data struct {
+			Project string `json:"project"`
+		} `json:"data"`
+	}{Data: struct {
+		Project string `json:"project"`
+	}{Project: projectGID}}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode request: %w", err)
+	}
+
+	var response struct {
+		Data models.Task `json:"data"`
+	}
+
+	if err := c.post(ctx, fmt.Sprintf("/tasks/%s/removeProject", taskGID), bytes.NewReader(body), &response); err != nil {
+		return nil, err
+	}
+
+	return &response.Data, nil
+}
+
+type TaskDuplicateRequest struct {
+	Name    string   `json:"name,omitempty"`
+	Include []string `json:"include,omitempty"`
+}
+
+func (c *HTTPClient) DuplicateTask(ctx context.Context, taskGID string, req TaskDuplicateRequest) (*models.Task, error) {
+	payload := struct {
+		Data TaskDuplicateRequest `json:"data"`
+	}{Data: req}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode request: %w", err)
+	}
+
+	var response struct {
+		Data models.Task `json:"data"`
+	}
+
+	if err := c.post(ctx, fmt.Sprintf("/tasks/%s/duplicate", taskGID), bytes.NewReader(body), &response); err != nil {
+		return nil, err
+	}
+
+	return &response.Data, nil
+}

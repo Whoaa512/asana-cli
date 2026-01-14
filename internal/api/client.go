@@ -18,6 +18,7 @@ type Client interface {
 	CreateTask(ctx context.Context, req models.TaskCreateRequest) (*models.Task, error)
 	UpdateTask(ctx context.Context, gid string, req models.TaskUpdateRequest) (*models.Task, error)
 	DeleteTask(ctx context.Context, gid string) error
+	DuplicateTask(ctx context.Context, taskGID string, req TaskDuplicateRequest) (*models.Task, error)
 
 	ListStories(ctx context.Context, taskGID string, limit int, offset string) (*models.ListResponse[models.Story], error)
 	AddComment(ctx context.Context, taskGID string, text string) (*models.Story, error)
@@ -35,6 +36,9 @@ type Client interface {
 
 	AddTag(ctx context.Context, taskGID string, tagGID string) (*models.Task, error)
 	RemoveTag(ctx context.Context, taskGID string, tagGID string) (*models.Task, error)
+
+	AddToProject(ctx context.Context, taskGID string, projectGID string) (*models.Task, error)
+	RemoveFromProject(ctx context.Context, taskGID string, projectGID string) (*models.Task, error)
 
 	ListProjects(ctx context.Context, opts ProjectListOptions) (*models.ListResponse[models.Project], error)
 	GetProject(ctx context.Context, gid string) (*models.Project, error)
