@@ -30,6 +30,9 @@ type Client interface {
 	AddDependency(ctx context.Context, taskGID string, dependsOnGID string) error
 	RemoveDependency(ctx context.Context, taskGID string, dependsOnGID string) error
 
+	AddFollowers(ctx context.Context, taskGID string, followers []string) (*models.Task, error)
+	RemoveFollower(ctx context.Context, taskGID string, followerGID string) (*models.Task, error)
+
 	ListProjects(ctx context.Context, opts ProjectListOptions) (*models.ListResponse[models.Project], error)
 	GetProject(ctx context.Context, gid string) (*models.Project, error)
 	CreateProject(ctx context.Context, req models.ProjectCreateRequest) (*models.Project, error)

@@ -121,3 +121,53 @@ func (c *HTTPClient) UpdateTask(ctx context.Context, gid string, req models.Task
 func (c *HTTPClient) DeleteTask(ctx context.Context, gid string) error {
 	return c.delete(ctx, "/tasks/"+gid)
 }
+
+func (c *HTTPClient) AddFollowers(ctx context.Context, taskGID string, followers []string) (*models.Task, error) {
+	payload := struct {
+		Data struct {
+			Followers []string `json:"followers"`
+		} `json:"data"`
+	}{Data: struct {
+		Followers []string `json:"followers"`
+	}{Followers: followers}}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode request: %w", err)
+	}
+
+	var response struct {
+		Data models.Task `json:"data"`
+	}
+
+	if err := c.post(ctx, fmt.Sprintf("/tasks/%s/addFollowers", taskGID), bytes.NewReader(body), &response); err != nil {
+		return nil, err
+	}
+
+	return &response.Data, nil
+}
+
+func (c *HTTPClient) RemoveFollower(ctx context.Context, taskGID string, followerGID string) (*models.Task, error) {
+	payload := struct {
+		Data struct {
+			Follower string `json:"follower"`
+		} `json:"data"`
+	}{Data: struct {
+		Follower string `json:"follower"`
+	}{Follower: followerGID}}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode request: %w", err)
+	}
+
+	var response struct {
+		Data models.Task `json:"data"`
+	}
+
+	if err := c.post(ctx, fmt.Sprintf("/tasks/%s/removeFollower", taskGID), bytes.NewReader(body), &response); err != nil {
+		return nil, err
+	}
+
+	return &response.Data, nil
+}
