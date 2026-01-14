@@ -43,6 +43,7 @@ type Client interface {
 	ListTaskProjects(ctx context.Context, taskGID string) ([]models.AsanaResource, error)
 
 	ListProjects(ctx context.Context, opts ProjectListOptions) (*models.ListResponse[models.Project], error)
+	ListUserProjects(ctx context.Context, opts UserProjectListOptions) (*models.ListResponse[models.Project], error)
 	GetProject(ctx context.Context, gid string) (*models.Project, error)
 	CreateProject(ctx context.Context, req models.ProjectCreateRequest) (*models.Project, error)
 

@@ -25,17 +25,30 @@ var meTeamsCmd = &cobra.Command{
 	RunE:  runMeTeams,
 }
 
+var meProjectsCmd = &cobra.Command{
+	Use:   "projects",
+	Short: "List workspace projects",
+	Long:  "List projects in my workspace. Asana doesn't have user-specific project filtering; this returns all visible workspace projects.",
+	RunE:  runMeProjects,
+}
+
 var (
-	meTeamsLimit  int
-	meTeamsOffset string
+	meTeamsLimit     int
+	meTeamsOffset    string
+	meProjectsLimit  int
+	meProjectsOffset string
 )
 
 func init() {
 	rootCmd.AddCommand(meCmd)
 	meCmd.AddCommand(meTeamsCmd)
+	meCmd.AddCommand(meProjectsCmd)
 
 	meTeamsCmd.Flags().IntVar(&meTeamsLimit, "limit", 50, "Max results to return")
 	meTeamsCmd.Flags().StringVar(&meTeamsOffset, "offset", "", "Pagination offset")
+
+	meProjectsCmd.Flags().IntVar(&meProjectsLimit, "limit", 50, "Max results to return")
+	meProjectsCmd.Flags().StringVar(&meProjectsOffset, "offset", "", "Pagination offset")
 }
 
 func runMe(_ *cobra.Command, _ []string) error {
@@ -80,6 +93,35 @@ func runMeTeams(_ *cobra.Command, _ []string) error {
 
 	client := newClient(cfg)
 	result, err := client.ListUserTeams(context.Background(), opts)
+	if err != nil {
+		return err
+	}
+
+	out := output.NewJSON(os.Stdout)
+	return out.Print(result)
+}
+
+func runMeProjects(_ *cobra.Command, _ []string) error {
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
+	if err := requireAuth(cfg); err != nil {
+		return err
+	}
+
+	if cfg.Workspace == "" {
+		return errors.NewGeneralError("no workspace specified", nil)
+	}
+
+	opts := api.UserProjectListOptions{
+		Workspace: cfg.Workspace,
+		Limit:     meProjectsLimit,
+		Offset:    meProjectsOffset,
+	}
+
+	client := newClient(cfg)
+	result, err := client.ListUserProjects(context.Background(), opts)
 	if err != nil {
 		return err
 	}

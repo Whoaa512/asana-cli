@@ -300,7 +300,8 @@ asana
 │   └── init
 │
 ├── me
-│   └── teams     --limit --offset
+│   ├── teams     --limit --offset
+│   └── projects  --limit --offset
 │
 └── version
 ```

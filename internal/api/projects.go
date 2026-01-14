@@ -16,6 +16,12 @@ type ProjectListOptions struct {
 	Offset    string
 }
 
+type UserProjectListOptions struct {
+	Workspace string
+	Limit     int
+	Offset    string
+}
+
 func (c *HTTPClient) ListProjects(ctx context.Context, opts ProjectListOptions) (*models.ListResponse[models.Project], error) {
 	if opts.Workspace == "" {
 		return nil, fmt.Errorf("workspace is required")
@@ -82,4 +88,34 @@ func (c *HTTPClient) CreateProject(ctx context.Context, req models.ProjectCreate
 	}
 
 	return &response.Data, nil
+}
+
+func (c *HTTPClient) ListUserProjects(ctx context.Context, opts UserProjectListOptions) (*models.ListResponse[models.Project], error) {
+	if opts.Workspace == "" {
+		return nil, fmt.Errorf("workspace is required")
+	}
+
+	path := fmt.Sprintf("/workspaces/%s/projects?opt_fields=name,archived,workspace,color", opts.Workspace)
+	sep := "&"
+
+	if opts.Limit > 0 {
+		path += fmt.Sprintf("%slimit=%d", sep, opts.Limit)
+	}
+	if opts.Offset != "" {
+		path += fmt.Sprintf("%soffset=%s", sep, opts.Offset)
+	}
+
+	var response struct {
+		Data     []models.Project `json:"data"`
+		NextPage *models.PageInfo `json:"next_page,omitempty"`
+	}
+
+	if err := c.get(ctx, path, &response); err != nil {
+		return nil, err
+	}
+
+	return &models.ListResponse[models.Project]{
+		Data:     response.Data,
+		NextPage: response.NextPage,
+	}, nil
 }
