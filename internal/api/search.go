@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	"github.com/whoaa512/asana-cli/internal/models"
 )
@@ -26,30 +27,25 @@ func (c *HTTPClient) SearchTasks(ctx context.Context, opts SearchTasksOptions) (
 	}
 
 	path := fmt.Sprintf("/workspaces/%s/tasks/search", opts.Workspace)
-	sep := "?"
 
-	path += fmt.Sprintf("%stext=%s", sep, opts.Text)
-	sep = "&"
-
+	params := url.Values{}
+	params.Set("text", opts.Text)
 	if opts.Limit > 0 {
-		path += fmt.Sprintf("%slimit=%d", sep, opts.Limit)
-		sep = "&"
+		params.Set("limit", fmt.Sprintf("%d", opts.Limit))
 	}
 	if opts.Offset != "" {
-		path += fmt.Sprintf("%soffset=%s", sep, opts.Offset)
-		sep = "&"
+		params.Set("offset", opts.Offset)
 	}
 	if opts.Project != "" {
-		path += fmt.Sprintf("%sprojects.any=%s", sep, opts.Project)
-		sep = "&"
+		params.Set("projects.any", opts.Project)
 	}
 	if opts.Assignee != "" {
-		path += fmt.Sprintf("%sassignee.any=%s", sep, opts.Assignee)
-		sep = "&"
+		params.Set("assignee.any", opts.Assignee)
 	}
 	if opts.Completed != nil {
-		path += fmt.Sprintf("%scompleted=%t", sep, *opts.Completed)
+		params.Set("completed", fmt.Sprintf("%t", *opts.Completed))
 	}
+	path += "?" + params.Encode()
 
 	var response struct {
 		Data     []models.Task    `json:"data"`
