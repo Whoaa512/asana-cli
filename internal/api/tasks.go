@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"strings"
 
 	"github.com/whoaa512/asana-cli/internal/models"
 )
@@ -35,36 +37,28 @@ func (c *HTTPClient) ListTasks(ctx context.Context, opts TaskListOptions) (*mode
 		return nil, fmt.Errorf("either project, tag, or workspace is required")
 	}
 
-	sep := "?"
+	params := url.Values{}
 	if opts.Limit > 0 {
-		path += fmt.Sprintf("%slimit=%d", sep, opts.Limit)
-		sep = "&"
+		params.Set("limit", fmt.Sprintf("%d", opts.Limit))
 	}
 	if opts.Offset != "" {
-		path += fmt.Sprintf("%soffset=%s", sep, opts.Offset)
-		sep = "&"
+		params.Set("offset", opts.Offset)
 	}
 	if opts.Assignee != "" {
 		if isSearchEndpoint {
-			path += fmt.Sprintf("%sassignee.any=%s", sep, opts.Assignee)
+			params.Set("assignee.any", opts.Assignee)
 		} else {
-			path += fmt.Sprintf("%sassignee=%s", sep, opts.Assignee)
+			params.Set("assignee", opts.Assignee)
 		}
-		sep = "&"
 	}
 	if opts.Completed != nil {
-		path += fmt.Sprintf("%scompleted=%t", sep, *opts.Completed)
-		sep = "&"
+		params.Set("completed", fmt.Sprintf("%t", *opts.Completed))
 	}
 	if len(opts.OptFields) > 0 {
-		fields := ""
-		for i, field := range opts.OptFields {
-			if i > 0 {
-				fields += ","
-			}
-			fields += field
-		}
-		path += fmt.Sprintf("%sopt_fields=%s", sep, fields)
+		params.Set("opt_fields", strings.Join(opts.OptFields, ","))
+	}
+	if len(params) > 0 {
+		path += "?" + params.Encode()
 	}
 
 	var response struct {
