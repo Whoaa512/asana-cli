@@ -91,6 +91,27 @@ func TestAPIErrors(t *testing.T) {
 			wantExit:   errors.ExitRateLimited,
 			wantSubstr: "rate limited",
 		},
+		{
+			name:       "malformed json short",
+			status:     500,
+			body:       `Internal Server Error`,
+			wantExit:   errors.ExitGeneral,
+			wantSubstr: "API error (non-JSON): Internal Server Error",
+		},
+		{
+			name:       "malformed json long",
+			status:     500,
+			body:       strings.Repeat("x", 250),
+			wantExit:   errors.ExitGeneral,
+			wantSubstr: "API error (non-JSON): " + strings.Repeat("x", 200) + "...",
+		},
+		{
+			name:       "empty body",
+			status:     500,
+			body:       "",
+			wantExit:   errors.ExitGeneral,
+			wantSubstr: "unknown error",
+		},
 	}
 
 	for _, tt := range tests {

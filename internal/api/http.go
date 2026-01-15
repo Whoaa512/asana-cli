@@ -194,10 +194,15 @@ func (c *HTTPClient) checkError(statusCode int, body []byte) error {
 			Message string `json:"message"`
 		} `json:"errors"`
 	}
-	_ = json.Unmarshal(body, &apiErr)
 
 	msg := "unknown error"
-	if len(apiErr.Errors) > 0 {
+	if err := json.Unmarshal(body, &apiErr); err != nil {
+		if len(body) > 200 {
+			msg = fmt.Sprintf("API error (non-JSON): %s...", string(body[:200]))
+		} else if len(body) > 0 {
+			msg = fmt.Sprintf("API error (non-JSON): %s", string(body))
+		}
+	} else if len(apiErr.Errors) > 0 {
 		msg = apiErr.Errors[0].Message
 	}
 
