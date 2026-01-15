@@ -32,5 +32,12 @@ description = "Run all checks (lint + test)"
 depends = ["lint", "test"]
 
 [tasks.release]
-description = "Create a new release with binaries"
-run = "bash scripts/release.sh"
+description = "Create a new release with binaries and draft notes (usage: mise run release VERSION)"
+run = """
+if [ -z "$1" ]; then
+  echo "Usage: mise run release VERSION"
+  echo "Example: mise run release 1.2.0"
+  exit 1
+fi
+bash scripts/release.sh "$1"
+"""

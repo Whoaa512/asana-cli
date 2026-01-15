@@ -16,4 +16,6 @@ coverage/
 
 # OS
 .DS_Store
-dist
+
+# Build artifacts
+dist/

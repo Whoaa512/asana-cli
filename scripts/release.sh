@@ -24,6 +24,34 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
+LAST_TAG=$(git tag --sort=-version:refname | head -1)
+if [[ -z "$LAST_TAG" ]]; then
+  echo "No previous tag found, using initial commit"
+  LAST_TAG=$(git rev-list --max-parents=0 HEAD)
+fi
+
+echo "Generating release notes from $LAST_TAG to HEAD..."
+NOTES_FILE=$(mktemp)
+
+cat > "$NOTES_FILE" <<EOF
+## New Commands
+
+$(git log "$LAST_TAG..HEAD" --oneline --no-merges | sed 's/^[a-f0-9]* /- /')
+
+## Install
+
+\`\`\`bash
+go install github.com/whoaa512/asana-cli/cmd/asana@$TAG
+\`\`\`
+
+Or download pre-built binaries from the release assets.
+EOF
+
+echo ""
+echo "Opening release notes in editor..."
+echo "Edit the notes to categorize changes properly."
+"${EDITOR:-vim}" "$NOTES_FILE"
+
 echo "Building binaries for $TAG..."
 rm -rf dist
 mkdir -p dist
@@ -44,7 +72,7 @@ for platform in "${PLATFORMS[@]}"; do
 done
 
 echo "Creating tag $TAG..."
-git tag -a "$TAG" -m "Release $TAG"
+git tag -a "$TAG" -F "$NOTES_FILE"
 
 echo "Pushing tag..."
 git push origin "$TAG"
@@ -56,6 +84,7 @@ gh-public release create "$TAG" \
   dist/asana-linux-arm64 \
   dist/asana-linux-amd64 \
   --title "$TAG" \
-  --generate-notes
+  --notes-file "$NOTES_FILE"
 
+rm -f "$NOTES_FILE"
 echo "Done! https://github.com/Whoaa512/asana-cli/releases/tag/$TAG"
