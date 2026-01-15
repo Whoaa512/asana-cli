@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 
 	"github.com/whoaa512/asana-cli/internal/models"
 )
@@ -28,18 +29,19 @@ func (c *HTTPClient) ListProjects(ctx context.Context, opts ProjectListOptions) 
 	}
 
 	path := fmt.Sprintf("/workspaces/%s/projects", opts.Workspace)
-	sep := "?"
 
+	params := url.Values{}
 	if opts.Limit > 0 {
-		path += fmt.Sprintf("%slimit=%d", sep, opts.Limit)
-		sep = "&"
+		params.Set("limit", fmt.Sprintf("%d", opts.Limit))
 	}
 	if opts.Offset != "" {
-		path += fmt.Sprintf("%soffset=%s", sep, opts.Offset)
-		sep = "&"
+		params.Set("offset", opts.Offset)
 	}
 	if opts.Archived {
-		path += fmt.Sprintf("%sarchived=%t", sep, opts.Archived)
+		params.Set("archived", fmt.Sprintf("%t", opts.Archived))
+	}
+	if len(params) > 0 {
+		path += "?" + params.Encode()
 	}
 
 	var response struct {
@@ -95,15 +97,17 @@ func (c *HTTPClient) ListUserProjects(ctx context.Context, opts UserProjectListO
 		return nil, fmt.Errorf("workspace is required")
 	}
 
-	path := fmt.Sprintf("/workspaces/%s/projects?opt_fields=name,archived,workspace,color", opts.Workspace)
-	sep := "&"
+	path := fmt.Sprintf("/workspaces/%s/projects", opts.Workspace)
 
+	params := url.Values{}
+	params.Set("opt_fields", "name,archived,workspace,color")
 	if opts.Limit > 0 {
-		path += fmt.Sprintf("%slimit=%d", sep, opts.Limit)
+		params.Set("limit", fmt.Sprintf("%d", opts.Limit))
 	}
 	if opts.Offset != "" {
-		path += fmt.Sprintf("%soffset=%s", sep, opts.Offset)
+		params.Set("offset", opts.Offset)
 	}
+	path += "?" + params.Encode()
 
 	var response struct {
 		Data     []models.Project `json:"data"`
