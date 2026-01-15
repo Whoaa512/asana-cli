@@ -1,11 +1,11 @@
 package cli
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 
-	"github.com/whoaa512/asana-cli/internal/api"
 	"github.com/whoaa512/asana-cli/internal/errors"
 	"github.com/whoaa512/asana-cli/internal/models"
 	"github.com/whoaa512/asana-cli/internal/output"
@@ -61,12 +61,12 @@ func runBlocked(_ *cobra.Command, _ []string) error {
 
 	client := newClient(cfg)
 
-	incompleteTasks, err := fetchIncompleteTasks(client, project, blockedAssignee, blockedLimit)
+	incompleteTasks, err := fetchIncompleteTasksWithDeps(client, project, blockedAssignee, blockedLimit)
 	if err != nil {
 		return err
 	}
 
-	blockedTasks, err := filterBlockedTasks(client, incompleteTasks)
+	blockedTasks, err := filterBlockedTasks(incompleteTasks)
 	if err != nil {
 		return err
 	}
@@ -75,19 +75,15 @@ func runBlocked(_ *cobra.Command, _ []string) error {
 	return out.Print(map[string]any{"data": blockedTasks})
 }
 
-func filterBlockedTasks(client api.Client, tasks []models.Task) ([]models.Task, error) {
+func filterBlockedTasks(tasks []models.Task) ([]models.Task, error) {
 	var blocked []models.Task
-
 	for _, task := range tasks {
-		hasBlockers, err := hasIncompleteDependencies(client, task.GID)
-		if err != nil {
-			return nil, err
+		if task.Dependencies == nil {
+			return nil, fmt.Errorf("task %s missing dependency data - ensure opt_fields includes dependencies", task.GID)
 		}
-
-		if hasBlockers {
+		if !isTaskReady(task) {
 			blocked = append(blocked, task)
 		}
 	}
-
 	return blocked, nil
 }

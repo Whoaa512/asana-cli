@@ -205,13 +205,12 @@ func writeBlockedTasks(output *strings.Builder, client api.Client, ctx context.C
 
 	output.WriteString("## Blocked Tasks\n")
 	for _, task := range tasks {
-		deps, err := client.ListDependencies(ctx, task.GID)
-		if err != nil {
-			continue
+		if task.Dependencies == nil {
+			return fmt.Errorf("task %s missing dependency data", task.GID)
 		}
 
 		var blockers []string
-		for _, dep := range deps {
+		for _, dep := range *task.Dependencies {
 			if !dep.Completed {
 				blockers = append(blockers, dep.Name)
 			}
@@ -239,7 +238,7 @@ func writeBlockedTasks(output *strings.Builder, client api.Client, ctx context.C
 }
 
 func fetchAndCategorize(client api.Client, project string, limit int) ([]models.Task, []models.Task, error) {
-	incompleteTasks, err := fetchIncompleteTasks(client, project, "", limit)
+	incompleteTasks, err := fetchIncompleteTasksWithDeps(client, project, "", limit)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -248,15 +247,13 @@ func fetchAndCategorize(client api.Client, project string, limit int) ([]models.
 	var blocked []models.Task
 
 	for _, task := range incompleteTasks {
-		hasBlockers, err := hasIncompleteDependencies(client, task.GID)
-		if err != nil {
-			return nil, nil, err
+		if task.Dependencies == nil {
+			return nil, nil, fmt.Errorf("task %s missing dependency data - ensure opt_fields includes dependencies", task.GID)
 		}
-
-		if hasBlockers {
-			blocked = append(blocked, task)
-		} else {
+		if isTaskReady(task) {
 			ready = append(ready, task)
+		} else {
+			blocked = append(blocked, task)
 		}
 	}
 

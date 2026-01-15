@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -62,12 +63,12 @@ func runReady(_ *cobra.Command, _ []string) error {
 
 	client := newClient(cfg)
 
-	incompleteTasks, err := fetchIncompleteTasks(client, project, readyAssignee, readyLimit)
+	incompleteTasks, err := fetchIncompleteTasksWithDeps(client, project, readyAssignee, readyLimit)
 	if err != nil {
 		return err
 	}
 
-	readyTasks, err := filterReadyTasks(client, incompleteTasks)
+	readyTasks, err := filterReadyTasks(incompleteTasks)
 	if err != nil {
 		return err
 	}
@@ -76,13 +77,14 @@ func runReady(_ *cobra.Command, _ []string) error {
 	return out.Print(map[string]any{"data": readyTasks})
 }
 
-func fetchIncompleteTasks(client api.Client, project, assignee string, limit int) ([]models.Task, error) {
+func fetchIncompleteTasksWithDeps(client api.Client, project, assignee string, limit int) ([]models.Task, error) {
 	completed := false
 	opts := api.TaskListOptions{
 		Project:   project,
 		Assignee:  assignee,
 		Completed: &completed,
 		Limit:     limit,
+		OptFields: []string{"name", "completed", "dependencies", "dependencies.completed"},
 	}
 
 	result, err := client.ListTasks(context.Background(), opts)
@@ -93,34 +95,27 @@ func fetchIncompleteTasks(client api.Client, project, assignee string, limit int
 	return result.Data, nil
 }
 
-func filterReadyTasks(client api.Client, tasks []models.Task) ([]models.Task, error) {
+func filterReadyTasks(tasks []models.Task) ([]models.Task, error) {
 	var ready []models.Task
-
 	for _, task := range tasks {
-		hasBlockers, err := hasIncompleteDependencies(client, task.GID)
-		if err != nil {
-			return nil, err
+		if task.Dependencies == nil {
+			return nil, fmt.Errorf("task %s missing dependency data - ensure opt_fields includes dependencies", task.GID)
 		}
-
-		if !hasBlockers {
+		if isTaskReady(task) {
 			ready = append(ready, task)
 		}
 	}
-
 	return ready, nil
 }
 
-func hasIncompleteDependencies(client api.Client, taskGID string) (bool, error) {
-	deps, err := client.ListDependencies(context.Background(), taskGID)
-	if err != nil {
-		return false, err
+func isTaskReady(task models.Task) bool {
+	if task.Dependencies == nil {
+		return true
 	}
-
-	for _, dep := range deps {
+	for _, dep := range *task.Dependencies {
 		if !dep.Completed {
-			return true, nil
+			return false
 		}
 	}
-
-	return false, nil
+	return true
 }

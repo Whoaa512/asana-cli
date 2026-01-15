@@ -11,7 +11,7 @@ type Task struct {
 	Projects     []AsanaResource `json:"projects,omitempty"`
 	Parent       *AsanaResource  `json:"parent,omitempty"`
 	Tags         []AsanaResource `json:"tags,omitempty"`
-	Dependencies []Task          `json:"dependencies,omitempty"`
+	Dependencies *[]Task         `json:"dependencies,omitempty"`
 }
 
 type TaskCreateRequest struct {
