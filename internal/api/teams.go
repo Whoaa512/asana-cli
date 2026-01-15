@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	"github.com/whoaa512/asana-cli/internal/models"
 )
@@ -18,14 +19,17 @@ func (c *HTTPClient) ListTeams(ctx context.Context, opts TeamListOptions) (*mode
 		return nil, fmt.Errorf("organization is required")
 	}
 
-	path := fmt.Sprintf("/organizations/%s/teams?opt_fields=name", opts.Organization)
+	path := fmt.Sprintf("/organizations/%s/teams", opts.Organization)
 
+	params := url.Values{}
+	params.Set("opt_fields", "name")
 	if opts.Limit > 0 {
-		path += fmt.Sprintf("&limit=%d", opts.Limit)
+		params.Set("limit", fmt.Sprintf("%d", opts.Limit))
 	}
 	if opts.Offset != "" {
-		path += fmt.Sprintf("&offset=%s", opts.Offset)
+		params.Set("offset", opts.Offset)
 	}
+	path += "?" + params.Encode()
 
 	var response struct {
 		Data     []models.Team    `json:"data"`
@@ -59,14 +63,18 @@ func (c *HTTPClient) ListUserTeams(ctx context.Context, opts UserTeamListOptions
 		userGID = "me"
 	}
 
-	path := fmt.Sprintf("/users/%s/teams?organization=%s&opt_fields=name", userGID, opts.Organization)
+	path := fmt.Sprintf("/users/%s/teams", userGID)
 
+	params := url.Values{}
+	params.Set("organization", opts.Organization)
+	params.Set("opt_fields", "name")
 	if opts.Limit > 0 {
-		path += fmt.Sprintf("&limit=%d", opts.Limit)
+		params.Set("limit", fmt.Sprintf("%d", opts.Limit))
 	}
 	if opts.Offset != "" {
-		path += fmt.Sprintf("&offset=%s", opts.Offset)
+		params.Set("offset", opts.Offset)
 	}
+	path += "?" + params.Encode()
 
 	var response struct {
 		Data     []models.Team    `json:"data"`
