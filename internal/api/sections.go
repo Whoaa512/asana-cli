@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 
 	"github.com/whoaa512/asana-cli/internal/models"
 )
@@ -21,14 +22,16 @@ func (c *HTTPClient) ListSections(ctx context.Context, opts SectionListOptions) 
 	}
 
 	path := fmt.Sprintf("/projects/%s/sections", opts.Project)
-	sep := "?"
 
+	params := url.Values{}
 	if opts.Limit > 0 {
-		path += fmt.Sprintf("%slimit=%d", sep, opts.Limit)
-		sep = "&"
+		params.Set("limit", fmt.Sprintf("%d", opts.Limit))
 	}
 	if opts.Offset != "" {
-		path += fmt.Sprintf("%soffset=%s", sep, opts.Offset)
+		params.Set("offset", opts.Offset)
+	}
+	if len(params) > 0 {
+		path += "?" + params.Encode()
 	}
 
 	var response struct {
