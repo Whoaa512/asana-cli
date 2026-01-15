@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 
 	"github.com/whoaa512/asana-cli/internal/models"
 )
@@ -12,13 +13,15 @@ import (
 func (c *HTTPClient) ListSubtasks(ctx context.Context, taskGID string, limit int, offset string) (*models.ListResponse[models.Task], error) {
 	path := fmt.Sprintf("/tasks/%s/subtasks", taskGID)
 
-	sep := "?"
+	params := url.Values{}
 	if limit > 0 {
-		path += fmt.Sprintf("%slimit=%d", sep, limit)
-		sep = "&"
+		params.Set("limit", fmt.Sprintf("%d", limit))
 	}
 	if offset != "" {
-		path += fmt.Sprintf("%soffset=%s", sep, offset)
+		params.Set("offset", offset)
+	}
+	if len(params) > 0 {
+		path += "?" + params.Encode()
 	}
 
 	var response struct {
