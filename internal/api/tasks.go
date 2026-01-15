@@ -17,6 +17,7 @@ type TaskListOptions struct {
 	Offset    string
 	Workspace string
 	Tag       string
+	OptFields []string
 }
 
 func (c *HTTPClient) ListTasks(ctx context.Context, opts TaskListOptions) (*models.ListResponse[models.Task], error) {
@@ -53,6 +54,17 @@ func (c *HTTPClient) ListTasks(ctx context.Context, opts TaskListOptions) (*mode
 	}
 	if opts.Completed != nil {
 		path += fmt.Sprintf("%scompleted=%t", sep, *opts.Completed)
+		sep = "&"
+	}
+	if len(opts.OptFields) > 0 {
+		fields := ""
+		for i, field := range opts.OptFields {
+			if i > 0 {
+				fields += ","
+			}
+			fields += field
+		}
+		path += fmt.Sprintf("%sopt_fields=%s", sep, fields)
 	}
 
 	var response struct {
