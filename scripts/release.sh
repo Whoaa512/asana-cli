@@ -1,11 +1,56 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:-}"
+usage() {
+  cat <<EOF
+Usage: $0 <version> [options]
+
+Options:
+  -n, --notes STRING       Release notes as a string
+  -f, --notes-file PATH    Path to file containing release notes
+  -h, --help               Show this help
+
+Examples:
+  $0 1.0.0
+  $0 1.0.0 --notes "Fixed bugs"
+  $0 1.0.0 --notes-file ./notes.md
+EOF
+  exit 0
+}
+
+VERSION=""
+NOTES_STRING=""
+NOTES_FILE_PATH=""
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -h|--help)
+      usage
+      ;;
+    -n|--notes)
+      NOTES_STRING="$2"
+      shift 2
+      ;;
+    -f|--notes-file)
+      NOTES_FILE_PATH="$2"
+      shift 2
+      ;;
+    *)
+      if [[ -z "$VERSION" ]]; then
+        VERSION="$1"
+        shift
+      else
+        echo "Error: Unknown argument: $1"
+        usage
+      fi
+      ;;
+  esac
+done
+
 if [[ -z "$VERSION" ]]; then
-  echo "Usage: $0 <version>"
-  echo "Example: $0 1.0.0"
-  exit 1
+  echo "Error: Version required"
+  echo ""
+  usage
 fi
 
 if [[ "$VERSION" == v* ]]; then
@@ -24,16 +69,29 @@ if [[ -n "$(git status --porcelain)" ]]; then
   exit 1
 fi
 
-LAST_TAG=$(git tag --sort=-version:refname | head -1)
-if [[ -z "$LAST_TAG" ]]; then
-  echo "No previous tag found, using initial commit"
-  LAST_TAG=$(git rev-list --max-parents=0 HEAD)
-fi
-
-echo "Generating release notes from $LAST_TAG to HEAD..."
 NOTES_FILE=$(mktemp)
+CLEANUP_NOTES_FILE=true
 
-cat > "$NOTES_FILE" <<EOF
+if [[ -n "$NOTES_STRING" ]]; then
+  echo "Using provided notes string..."
+  echo "$NOTES_STRING" > "$NOTES_FILE"
+elif [[ -n "$NOTES_FILE_PATH" ]]; then
+  echo "Using notes from file: $NOTES_FILE_PATH"
+  if [[ ! -f "$NOTES_FILE_PATH" ]]; then
+    echo "Error: Notes file not found: $NOTES_FILE_PATH"
+    exit 1
+  fi
+  cp "$NOTES_FILE_PATH" "$NOTES_FILE"
+else
+  LAST_TAG=$(git tag --sort=-version:refname | head -1)
+  if [[ -z "$LAST_TAG" ]]; then
+    echo "No previous tag found, using initial commit"
+    LAST_TAG=$(git rev-list --max-parents=0 HEAD)
+  fi
+
+  echo "Generating release notes from $LAST_TAG to HEAD..."
+
+  cat > "$NOTES_FILE" <<EOF
 ## New Commands
 
 $(git log "$LAST_TAG..HEAD" --oneline --no-merges | sed 's/^[a-f0-9]* /- /')
@@ -47,10 +105,11 @@ go install github.com/whoaa512/asana-cli/cmd/asana@$TAG
 Or download pre-built binaries from the release assets.
 EOF
 
-echo ""
-echo "Opening release notes in editor..."
-echo "Edit the notes to categorize changes properly."
-"${EDITOR:-vim}" "$NOTES_FILE"
+  echo ""
+  echo "Opening release notes in editor..."
+  echo "Edit the notes to categorize changes properly."
+  "${EDITOR:-vim}" "$NOTES_FILE"
+fi
 
 echo "Building binaries for $TAG..."
 rm -rf dist
