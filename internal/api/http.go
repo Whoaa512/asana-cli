@@ -28,6 +28,7 @@ type HTTPClient struct {
 	httpClient *http.Client
 	debug      bool
 	debugOut   io.Writer
+	rng        *rand.Rand
 }
 
 type Option func(*HTTPClient)
@@ -52,6 +53,7 @@ func NewHTTPClient(cfg *config.Config, opts ...Option) *HTTPClient {
 		httpClient: &http.Client{
 			Timeout: cfg.Timeout,
 		},
+		rng: rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 
 	for _, opt := range opts {
@@ -155,7 +157,7 @@ func (c *HTTPClient) doWithRetry(ctx context.Context, method, path string, bodyB
 			return errors.NewRateLimitedError(formatRetryAfter(retryAfter))
 		}
 
-		waitTime := calculateBackoff(attempt, retryAfter)
+		waitTime := c.calculateBackoff(attempt, retryAfter)
 		if c.debug && c.debugOut != nil {
 			_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] Rate limited, retrying in %s (attempt %d/%d)\n", waitTime, attempt+1, maxRetries)
 		}
@@ -244,7 +246,7 @@ func formatRetryAfter(d time.Duration) string {
 	return d.String()
 }
 
-func calculateBackoff(attempt int, retryAfter time.Duration) time.Duration {
+func (c *HTTPClient) calculateBackoff(attempt int, retryAfter time.Duration) time.Duration {
 	if retryAfter > 0 {
 		return retryAfter
 	}
@@ -252,7 +254,7 @@ func calculateBackoff(attempt int, retryAfter time.Duration) time.Duration {
 	if backoff > maxBackoff {
 		backoff = maxBackoff
 	}
-	jitter := time.Duration(rand.Int63n(int64(backoff) / 4))
+	jitter := time.Duration(c.rng.Int63n(int64(backoff) / 4))
 	return backoff + jitter
 }
 
