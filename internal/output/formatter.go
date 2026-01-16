@@ -26,8 +26,23 @@ type Brief struct {
 }
 
 func (b *Brief) Print(v any) error {
+	if task, ok := v.(models.Task); ok {
+		return b.printTask(task)
+	}
+	if task, ok := v.(*models.Task); ok && task != nil {
+		return b.printTask(*task)
+	}
 	json := NewJSON(b.w)
 	return json.Print(v)
+}
+
+func (b *Brief) printTask(t models.Task) error {
+	if t.DueOn != "" {
+		_, err := fmt.Fprintf(b.w, "%s  %s  (due %s)\n", t.GID, t.Name, t.DueOn)
+		return err
+	}
+	_, err := fmt.Fprintf(b.w, "%s  %s\n", t.GID, t.Name)
+	return err
 }
 
 func (b *Brief) PrintError(err error) error {
