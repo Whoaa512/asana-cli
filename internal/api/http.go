@@ -162,10 +162,13 @@ func (c *HTTPClient) doWithRetry(ctx context.Context, method, path string, bodyB
 			_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] Rate limited, retrying in %s (attempt %d/%d)\n", waitTime, attempt+1, maxRetries)
 		}
 
+		timer := time.NewTimer(waitTime)
+		defer timer.Stop()
+
 		select {
 		case <-ctx.Done():
 			return errors.NewNetworkError("request cancelled", ctx.Err())
-		case <-time.After(waitTime):
+		case <-timer.C:
 		}
 
 		return c.doWithRetry(ctx, method, path, bodyBytes, result, attempt+1)
