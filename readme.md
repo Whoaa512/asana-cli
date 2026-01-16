@@ -83,6 +83,10 @@ asana blocked                       # Show blocked tasks
 # Search & explore
 asana search "query"                # Text search
 asana task get <gid>                # Task details
+
+# Discovery (if above isn't enough)
+asana --help                        # All commands
+asana <cmd> --help                  # Subcommands & flags
 ```
 
 Section config (.asana.json):
