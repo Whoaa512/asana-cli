@@ -24,8 +24,9 @@ var taskListCmd = &cobra.Command{
 }
 
 var taskGetCmd = &cobra.Command{
-	Use:   "get <gid>",
+	Use:   "get <task>",
 	Short: "Get task details",
+	Long:  "Get task details by GID or name. Uses fuzzy matching for names.",
 	Args:  cobra.ExactArgs(1),
 	RunE:  runTaskGet,
 }
@@ -49,36 +50,41 @@ Use --parent to create a subtask instead.`,
 }
 
 var taskUpdateCmd = &cobra.Command{
-	Use:   "update <gid>",
+	Use:   "update <task>",
 	Short: "Update a task",
+	Long:  "Update a task by GID or name. Uses fuzzy matching for names.",
 	Args:  cobra.ExactArgs(1),
 	RunE:  runTaskUpdate,
 }
 
 var taskCompleteCmd = &cobra.Command{
-	Use:   "complete <gid>",
+	Use:   "complete [<task>]",
 	Short: "Mark task as complete",
-	Args:  cobra.ExactArgs(1),
+	Long:  "Mark task as complete by GID or name. Uses context task if no argument provided. Uses fuzzy matching for names.",
+	Args:  cobra.MaximumNArgs(1),
 	RunE:  runTaskComplete,
 }
 
 var taskReopenCmd = &cobra.Command{
-	Use:   "reopen <gid>",
+	Use:   "reopen [<task>]",
 	Short: "Mark task as incomplete",
-	Args:  cobra.ExactArgs(1),
+	Long:  "Mark task as incomplete by GID or name. Uses context task if no argument provided. Uses fuzzy matching for names.",
+	Args:  cobra.MaximumNArgs(1),
 	RunE:  runTaskReopen,
 }
 
 var taskDeleteCmd = &cobra.Command{
-	Use:   "delete <gid>",
+	Use:   "delete <task>",
 	Short: "Delete a task",
+	Long:  "Delete a task by GID or name. Uses fuzzy matching for names.",
 	Args:  cobra.ExactArgs(1),
 	RunE:  runTaskDelete,
 }
 
 var taskAssignCmd = &cobra.Command{
-	Use:   "assign <gid> <assignee>",
+	Use:   "assign <task> <assignee>",
 	Short: "Assign a task to a user",
+	Long:  "Assign a task by GID or name. Uses fuzzy matching for names.",
 	Args:  cobra.ExactArgs(2),
 	RunE:  runTaskAssign,
 }
@@ -102,6 +108,8 @@ var (
 	taskUpdateNotes    string
 	taskUpdateAssignee string
 	taskUpdateDueOn    string
+
+	taskPick bool
 )
 
 func init() {
@@ -134,6 +142,13 @@ func init() {
 	taskUpdateCmd.Flags().StringVar(&taskUpdateNotes, "notes", "", "New task notes")
 	taskUpdateCmd.Flags().StringVar(&taskUpdateAssignee, "assignee", "", "New assignee GID or 'me'")
 	taskUpdateCmd.Flags().StringVar(&taskUpdateDueOn, "due-on", "", "New due date (YYYY-MM-DD)")
+
+	taskGetCmd.Flags().BoolVar(&taskPick, "pick", false, "Show interactive picker if multiple matches")
+	taskUpdateCmd.Flags().BoolVar(&taskPick, "pick", false, "Show interactive picker if multiple matches")
+	taskCompleteCmd.Flags().BoolVar(&taskPick, "pick", false, "Show interactive picker if multiple matches")
+	taskReopenCmd.Flags().BoolVar(&taskPick, "pick", false, "Show interactive picker if multiple matches")
+	taskDeleteCmd.Flags().BoolVar(&taskPick, "pick", false, "Show interactive picker if multiple matches")
+	taskAssignCmd.Flags().BoolVar(&taskPick, "pick", false, "Show interactive picker if multiple matches")
 }
 
 func runTaskList(_ *cobra.Command, _ []string) error {
@@ -191,7 +206,14 @@ func runTaskGet(_ *cobra.Command, args []string) error {
 	}
 
 	client := newClient(cfg)
-	task, err := client.GetTask(context.Background(), args[0])
+	ctx := context.Background()
+
+	taskGID, err := resolveTaskGID(ctx, cfg, client, args[0], taskPick)
+	if err != nil {
+		return err
+	}
+
+	task, err := client.GetTask(ctx, taskGID)
 	if err != nil {
 		return err
 	}
@@ -256,6 +278,14 @@ func runTaskUpdate(_ *cobra.Command, args []string) error {
 		return err
 	}
 
+	client := newClient(cfg)
+	ctx := context.Background()
+
+	taskGID, err := resolveTaskGID(ctx, cfg, client, args[0], taskPick)
+	if err != nil {
+		return err
+	}
+
 	req := models.TaskUpdateRequest{}
 	if taskUpdateName != "" {
 		req.Name = &taskUpdateName
@@ -272,11 +302,10 @@ func runTaskUpdate(_ *cobra.Command, args []string) error {
 
 	if cfg.DryRun {
 		out := newOutput()
-		return out.Print(map[string]any{"dry_run": true, "gid": args[0], "request": req})
+		return out.Print(map[string]any{"dry_run": true, "gid": taskGID, "request": req})
 	}
 
-	client := newClient(cfg)
-	task, err := client.UpdateTask(context.Background(), args[0], req)
+	task, err := client.UpdateTask(ctx, taskGID, req)
 	if err != nil {
 		return err
 	}
@@ -294,7 +323,23 @@ func runTaskComplete(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	taskGID := args[0]
+	client := newClient(cfg)
+	ctx := context.Background()
+
+	var taskGID string
+	if len(args) == 0 {
+		if cfg.Task == "" {
+			return errors.NewGeneralError("no task specified and no task in context", nil)
+		}
+		taskGID = cfg.Task
+	} else {
+		resolved, err := resolveTaskGID(ctx, cfg, client, args[0], taskPick)
+		if err != nil {
+			return err
+		}
+		taskGID = resolved
+	}
+
 	completed := true
 	req := models.TaskUpdateRequest{Completed: &completed}
 
@@ -307,14 +352,13 @@ func runTaskComplete(_ *cobra.Command, args []string) error {
 		return out.Print(result)
 	}
 
-	client := newClient(cfg)
-	task, err := client.UpdateTask(context.Background(), taskGID, req)
+	task, err := client.UpdateTask(ctx, taskGID, req)
 	if err != nil {
 		return err
 	}
 
 	if cfg.Sections != nil && cfg.Sections["done"] != "" {
-		if err := client.AddTaskToSection(context.Background(), cfg.Sections["done"], taskGID); err != nil {
+		if err := client.AddTaskToSection(ctx, cfg.Sections["done"], taskGID); err != nil {
 			return err
 		}
 	}
@@ -332,7 +376,23 @@ func runTaskReopen(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	taskGID := args[0]
+	client := newClient(cfg)
+	ctx := context.Background()
+
+	var taskGID string
+	if len(args) == 0 {
+		if cfg.Task == "" {
+			return errors.NewGeneralError("no task specified and no task in context", nil)
+		}
+		taskGID = cfg.Task
+	} else {
+		resolved, err := resolveTaskGID(ctx, cfg, client, args[0], taskPick)
+		if err != nil {
+			return err
+		}
+		taskGID = resolved
+	}
+
 	completed := false
 	req := models.TaskUpdateRequest{Completed: &completed}
 
@@ -345,14 +405,13 @@ func runTaskReopen(_ *cobra.Command, args []string) error {
 		return out.Print(result)
 	}
 
-	client := newClient(cfg)
-	task, err := client.UpdateTask(context.Background(), taskGID, req)
+	task, err := client.UpdateTask(ctx, taskGID, req)
 	if err != nil {
 		return err
 	}
 
 	if cfg.Sections != nil && cfg.Sections["in_progress"] != "" {
-		if err := client.AddTaskToSection(context.Background(), cfg.Sections["in_progress"], taskGID); err != nil {
+		if err := client.AddTaskToSection(ctx, cfg.Sections["in_progress"], taskGID); err != nil {
 			return err
 		}
 	}
@@ -370,18 +429,25 @@ func runTaskDelete(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	if cfg.DryRun {
-		out := newOutput()
-		return out.Print(map[string]any{"dry_run": true, "gid": args[0], "action": "delete"})
+	client := newClient(cfg)
+	ctx := context.Background()
+
+	taskGID, err := resolveTaskGID(ctx, cfg, client, args[0], taskPick)
+	if err != nil {
+		return err
 	}
 
-	client := newClient(cfg)
-	if err := client.DeleteTask(context.Background(), args[0]); err != nil {
+	if cfg.DryRun {
+		out := newOutput()
+		return out.Print(map[string]any{"dry_run": true, "gid": taskGID, "action": "delete"})
+	}
+
+	if err := client.DeleteTask(ctx, taskGID); err != nil {
 		return err
 	}
 
 	out := newOutput()
-	return out.Print(map[string]any{"deleted": true, "gid": args[0]})
+	return out.Print(map[string]any{"deleted": true, "gid": taskGID})
 }
 
 func runTaskAssign(_ *cobra.Command, args []string) error {
@@ -393,16 +459,23 @@ func runTaskAssign(_ *cobra.Command, args []string) error {
 		return err
 	}
 
+	client := newClient(cfg)
+	ctx := context.Background()
+
+	taskGID, err := resolveTaskGID(ctx, cfg, client, args[0], taskPick)
+	if err != nil {
+		return err
+	}
+
 	assignee := args[1]
 	req := models.TaskUpdateRequest{Assignee: &assignee}
 
 	if cfg.DryRun {
 		out := newOutput()
-		return out.Print(map[string]any{"dry_run": true, "gid": args[0], "assignee": assignee})
+		return out.Print(map[string]any{"dry_run": true, "gid": taskGID, "assignee": assignee})
 	}
 
-	client := newClient(cfg)
-	task, err := client.UpdateTask(context.Background(), args[0], req)
+	task, err := client.UpdateTask(ctx, taskGID, req)
 	if err != nil {
 		return err
 	}
