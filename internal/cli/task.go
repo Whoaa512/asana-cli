@@ -179,8 +179,8 @@ func runTaskList(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	out := output.NewJSON(os.Stdout)
-	return out.Print(result)
+	out := newOutput()
+	return out.PrintTaskList(result)
 }
 
 func runTaskGet(_ *cobra.Command, args []string) error {

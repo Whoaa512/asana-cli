@@ -71,8 +71,8 @@ func runBlocked(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	out := output.NewJSON(os.Stdout)
-	return out.Print(map[string]any{"data": blockedTasks})
+	out := newOutput()
+	return out.PrintTasks(blockedTasks)
 }
 
 func filterBlockedTasks(tasks []models.Task) ([]models.Task, error) {

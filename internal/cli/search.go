@@ -88,6 +88,6 @@ func runSearch(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	out := output.NewJSON(os.Stdout)
-	return out.Print(result)
+	out := newOutput()
+	return out.PrintTaskList(result)
 }

@@ -73,8 +73,8 @@ func runReady(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	out := output.NewJSON(os.Stdout)
-	return out.Print(map[string]any{"data": readyTasks})
+	out := newOutput()
+	return out.PrintTasks(readyTasks)
 }
 
 func fetchIncompleteTasksWithDeps(client api.Client, project, assignee string, limit int) ([]models.Task, error) {

@@ -20,6 +20,7 @@ var (
 	flagDryRun     bool
 	flagTimeout    time.Duration
 	flagConfigPath string
+	flagFormat     string
 )
 
 var rootCmd = &cobra.Command{
@@ -33,7 +34,8 @@ Use .asana.json in your repo root to set project/task context.
 Global flags:
   --debug     Print HTTP requests/responses to stderr
   --dry-run   Preview mutations without executing
-  --workspace Override workspace GID`,
+  --workspace Override workspace GID
+  --format    Output format: json (default), brief`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
 }
@@ -44,6 +46,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&flagDryRun, "dry-run", false, "Preview mutations without executing")
 	rootCmd.PersistentFlags().DurationVar(&flagTimeout, "timeout", 0, "HTTP request timeout (default 30s)")
 	rootCmd.PersistentFlags().StringVar(&flagConfigPath, "config", "", "Config file path (default ~/.config/asana-cli/config.json)")
+	rootCmd.PersistentFlags().StringVar(&flagFormat, "format", "json", "Output format: json, brief")
 
 	rootCmd.AddCommand(logCmd)
 	rootCmd.AddCommand(noteCmd)
@@ -110,6 +113,10 @@ func requireAuth(cfg *config.Config) error {
 		return errors.NewAuthError("ASANA_ACCESS_TOKEN environment variable not set")
 	}
 	return nil
+}
+
+func newOutput() output.Formatter {
+	return output.NewFormatter(flagFormat, os.Stdout)
 }
 
 func runNote(_ *cobra.Command, args []string) error {
