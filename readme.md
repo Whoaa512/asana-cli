@@ -136,6 +136,9 @@ asana task update <task-gid> --name "New name" --due-on 2024-12-31
 # Complete a task
 asana task complete <task-gid>
 
+# Reopen a completed task
+asana task reopen <task-gid>
+
 # Move task to a section
 asana task move <task-gid> --section <section-gid>
 asana task start <task-gid>   # Move to in_progress section
@@ -204,6 +207,7 @@ Sessions capture git branch info and format a summary comment on the task.
 ```bash
 asana log <text>    # → asana session log <text>
 asana done          # → asana task complete <context-task>
+asana reopen        # → asana task reopen <context-task>
 asana note <text>   # → asana task comment <context-task> --text <text>
 ```
 
@@ -216,6 +220,7 @@ asana
 ├── blocked       --project --assignee --limit             # Show blocked tasks
 ├── search        <query> --project --assignee --completed --limit --offset
 ├── done                                                   # Complete context task
+├── reopen                                                 # Reopen context task
 ├── log           <text> [--type]                          # Session log alias
 ├── note          <text>                                   # Task comment alias
 │
@@ -226,6 +231,7 @@ asana
 │   ├── update    <gid> --name --assignee --due-on --notes
 │   ├── delete    <gid>
 │   ├── complete  <gid>
+│   ├── reopen    <gid>
 │   ├── assign    <gid> <assignee>
 │   ├── move      <gid> --section (required)
 │   ├── start     <gid>                                    # Move to in_progress
@@ -313,23 +319,27 @@ asana
 |------|-------|---------|-------------|
 | `--workspace` | `-w` | from config | Override workspace GID |
 | `--config` | | `~/.config/asana-cli/config.json` | Config file path |
+| `--format` | `-f` | `json` | Output format: `json` or `brief` |
 | `--debug` | | `false` | Print HTTP requests/responses |
 | `--dry-run` | | `false` | Preview without executing |
 | `--timeout` | | `30s` | HTTP timeout |
 
 ## Output Format
 
-All output is JSON. Examples:
+Default output is JSON (for AI agents and automation). Use `--format=brief` for human-readable output.
 
 ```bash
-# Single resource
+# JSON (default) - pipe to jq for formatting
 asana task get 123 | jq '.name'
-
-# List with pagination
 asana task list --project 123 | jq '.data[].name'
 
-# Check for more pages
-asana task list --project 123 | jq '.next_page'
+# Brief format - one task per line
+asana ready --format=brief
+# 123456789  Fix login bug  (due 2026-01-20)
+# 987654321  Add tests
+
+asana task get 123 --format=brief
+# 123456789  Fix login bug  (due 2026-01-20)
 ```
 
 ### Exit Codes
@@ -357,6 +367,20 @@ mise run clean     # Clean artifacts
 
 ## FAQ
 
+**Q: Do I always need to use GIDs?**
+
+No! Task commands support fuzzy name matching:
+
+```bash
+# These all work:
+asana task get 1234567890        # By GID
+asana task get "login bug"       # By name (fuzzy match)
+asana task complete "auth"       # Matches "Fix auth flow"
+
+# Interactive picker for ambiguous matches:
+asana task get "bug" --pick      # Shows picker if multiple matches
+```
+
 **Q: How do I find GIDs?**
 
 GIDs are Asana's unique identifiers. Find them via:
@@ -364,6 +388,7 @@ GIDs are Asana's unique identifiers. Find them via:
 - `asana project list` → project GIDs
 - `asana task list --project <gid>` → task GIDs
 - Web UI: open any resource, GID is in the URL
+- Or just use task names with fuzzy matching!
 
 **Q: How do I set up for a specific repo?**
 
@@ -398,9 +423,9 @@ The CLI auto-retries with backoff. For 429 errors, check the `Retry-After` in st
 
 When you delete a section, tasks in that section are moved to the default/first section of the project. Tasks are NOT deleted. The Asana API handles this automatically.
 
-**Q: Why JSON only?**
+**Q: Why is JSON the default?**
 
-Primary use case is AI agents and automation. JSON is reliably parseable. Pipe to `jq` for formatting.
+Primary use case is AI agents and automation. JSON is reliably parseable. Use `--format=brief` for human-readable output, or pipe JSON to `jq` for custom formatting.
 
 ## Docs
 
