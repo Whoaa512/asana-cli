@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -23,9 +24,9 @@ var ctxShowCmd = &cobra.Command{
 }
 
 var ctxTaskCmd = &cobra.Command{
-	Use:   "task [<gid>]",
+	Use:   "task [<task>]",
 	Short: "Get or set context task",
-	Long:  "Without args, shows current task. With gid, sets task. With --clear, removes task.",
+	Long:  "Without args, shows current task. With GID or name, sets task. With --clear, removes task. Uses fuzzy matching for names.",
 	Args:  cobra.MaximumNArgs(1),
 	RunE:  runCtxTask,
 }
@@ -46,6 +47,7 @@ var ctxClearCmd = &cobra.Command{
 
 var (
 	ctxTaskClear    bool
+	ctxTaskPick     bool
 	ctxProjectClear bool
 )
 
@@ -57,6 +59,7 @@ func init() {
 	ctxCmd.AddCommand(ctxClearCmd)
 
 	ctxTaskCmd.Flags().BoolVar(&ctxTaskClear, "clear", false, "Clear the task from context")
+	ctxTaskCmd.Flags().BoolVar(&ctxTaskPick, "pick", false, "Show interactive picker if multiple matches")
 	ctxProjectCmd.Flags().BoolVar(&ctxProjectClear, "clear", false, "Clear the project from context")
 }
 
@@ -78,24 +81,40 @@ func runCtxShow(_ *cobra.Command, _ []string) error {
 }
 
 func runCtxTask(_ *cobra.Command, args []string) error {
-	ctx, err := config.LoadLocalContext()
+	localCtx, err := config.LoadLocalContext()
 	if err != nil {
 		return errors.NewGeneralError("failed to load context", err)
 	}
 
 	if ctxTaskClear {
-		ctx.Task = ""
-		return saveContext(ctx)
+		localCtx.Task = ""
+		return saveContext(localCtx)
 	}
 
 	if len(args) == 0 {
-		result := map[string]string{"task": ctx.Task}
+		result := map[string]string{"task": localCtx.Task}
 		out := output.NewJSON(os.Stdout)
 		return out.Print(result)
 	}
 
-	ctx.Task = args[0]
-	return saveContext(ctx)
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
+	if err := requireAuth(cfg); err != nil {
+		return err
+	}
+
+	client := newClient(cfg)
+	ctx := context.Background()
+
+	taskGID, err := resolveTaskGID(ctx, cfg, client, args[0], ctxTaskPick)
+	if err != nil {
+		return err
+	}
+
+	localCtx.Task = taskGID
+	return saveContext(localCtx)
 }
 
 func runCtxProject(_ *cobra.Command, args []string) error {
