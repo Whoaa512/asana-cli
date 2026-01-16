@@ -48,6 +48,7 @@ func init() {
 	rootCmd.AddCommand(logCmd)
 	rootCmd.AddCommand(noteCmd)
 	rootCmd.AddCommand(doneCmd)
+	rootCmd.AddCommand(reopenCmd)
 }
 
 var logCmd = &cobra.Command{
@@ -68,6 +69,12 @@ var doneCmd = &cobra.Command{
 	Use:   "done",
 	Short: "Mark context task as complete (alias for 'task complete')",
 	RunE:  runDone,
+}
+
+var reopenCmd = &cobra.Command{
+	Use:   "reopen",
+	Short: "Reopen context task (alias for 'task reopen')",
+	RunE:  runReopen,
 }
 
 func Execute() int {
@@ -166,6 +173,47 @@ func runDone(_ *cobra.Command, _ []string) error {
 
 	if cfg.Sections != nil && cfg.Sections["done"] != "" {
 		if err := client.AddTaskToSection(context.Background(), cfg.Sections["done"], cfg.Task); err != nil {
+			return err
+		}
+	}
+
+	out := output.NewJSON(os.Stdout)
+	return out.Print(task)
+}
+
+func runReopen(_ *cobra.Command, _ []string) error {
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
+	if err := requireAuth(cfg); err != nil {
+		return err
+	}
+
+	if cfg.Task == "" {
+		return errors.NewGeneralError("no task in context, set via 'ctx task <gid>'", nil)
+	}
+
+	completed := false
+	req := models.TaskUpdateRequest{Completed: &completed}
+
+	if cfg.DryRun {
+		out := output.NewJSON(os.Stdout)
+		result := map[string]any{"dry_run": true, "task_gid": cfg.Task, "action": "reopen"}
+		if cfg.Sections != nil && cfg.Sections["in_progress"] != "" {
+			result["move_to_section"] = cfg.Sections["in_progress"]
+		}
+		return out.Print(result)
+	}
+
+	client := newClient(cfg)
+	task, err := client.UpdateTask(context.Background(), cfg.Task, req)
+	if err != nil {
+		return err
+	}
+
+	if cfg.Sections != nil && cfg.Sections["in_progress"] != "" {
+		if err := client.AddTaskToSection(context.Background(), cfg.Sections["in_progress"], cfg.Task); err != nil {
 			return err
 		}
 	}

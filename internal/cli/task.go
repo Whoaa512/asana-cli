@@ -64,6 +64,13 @@ var taskCompleteCmd = &cobra.Command{
 	RunE:  runTaskComplete,
 }
 
+var taskReopenCmd = &cobra.Command{
+	Use:   "reopen <gid>",
+	Short: "Mark task as incomplete",
+	Args:  cobra.ExactArgs(1),
+	RunE:  runTaskReopen,
+}
+
 var taskDeleteCmd = &cobra.Command{
 	Use:   "delete <gid>",
 	Short: "Delete a task",
@@ -106,6 +113,7 @@ func init() {
 	taskCmd.AddCommand(taskCreateCmd)
 	taskCmd.AddCommand(taskUpdateCmd)
 	taskCmd.AddCommand(taskCompleteCmd)
+	taskCmd.AddCommand(taskReopenCmd)
 	taskCmd.AddCommand(taskDeleteCmd)
 	taskCmd.AddCommand(taskAssignCmd)
 
@@ -309,6 +317,44 @@ func runTaskComplete(_ *cobra.Command, args []string) error {
 
 	if cfg.Sections != nil && cfg.Sections["done"] != "" {
 		if err := client.AddTaskToSection(context.Background(), cfg.Sections["done"], taskGID); err != nil {
+			return err
+		}
+	}
+
+	out := output.NewJSON(os.Stdout)
+	return out.Print(task)
+}
+
+func runTaskReopen(_ *cobra.Command, args []string) error {
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
+	if err := requireAuth(cfg); err != nil {
+		return err
+	}
+
+	taskGID := args[0]
+	completed := false
+	req := models.TaskUpdateRequest{Completed: &completed}
+
+	if cfg.DryRun {
+		out := output.NewJSON(os.Stdout)
+		result := map[string]any{"dry_run": true, "gid": taskGID, "action": "reopen"}
+		if cfg.Sections != nil && cfg.Sections["in_progress"] != "" {
+			result["move_to_section"] = cfg.Sections["in_progress"]
+		}
+		return out.Print(result)
+	}
+
+	client := newClient(cfg)
+	task, err := client.UpdateTask(context.Background(), taskGID, req)
+	if err != nil {
+		return err
+	}
+
+	if cfg.Sections != nil && cfg.Sections["in_progress"] != "" {
+		if err := client.AddTaskToSection(context.Background(), cfg.Sections["in_progress"], taskGID); err != nil {
 			return err
 		}
 	}
