@@ -1,3 +1,6 @@
+[tools]
+golangci-lint = "2.8"
+
 [tasks.build]
 description = "Build the binary"
 run = """
