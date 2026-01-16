@@ -137,7 +137,7 @@ echo "Pushing tag..."
 git push origin "$TAG"
 
 echo "Creating GitHub release..."
-gh-public release create "$TAG" \
+gh release create "$TAG" \
   dist/asana-darwin-arm64 \
   dist/asana-darwin-amd64 \
   dist/asana-linux-arm64 \
