@@ -2,14 +2,12 @@ package cli
 
 import (
 	"context"
-	"os"
 
 	"github.com/spf13/cobra"
 
 	"github.com/whoaa512/asana-cli/internal/api"
 	"github.com/whoaa512/asana-cli/internal/errors"
 	"github.com/whoaa512/asana-cli/internal/models"
-	"github.com/whoaa512/asana-cli/internal/output"
 )
 
 var taskCmd = &cobra.Command{
@@ -198,7 +196,7 @@ func runTaskGet(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	out := output.NewJSON(os.Stdout)
+	out := newOutput()
 	return out.Print(task)
 }
 
@@ -235,7 +233,7 @@ func runTaskCreate(_ *cobra.Command, _ []string) error {
 	}
 
 	if cfg.DryRun {
-		out := output.NewJSON(os.Stdout)
+		out := newOutput()
 		return out.Print(map[string]any{"dry_run": true, "request": req})
 	}
 
@@ -245,7 +243,7 @@ func runTaskCreate(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	out := output.NewJSON(os.Stdout)
+	out := newOutput()
 	return out.Print(task)
 }
 
@@ -273,7 +271,7 @@ func runTaskUpdate(_ *cobra.Command, args []string) error {
 	}
 
 	if cfg.DryRun {
-		out := output.NewJSON(os.Stdout)
+		out := newOutput()
 		return out.Print(map[string]any{"dry_run": true, "gid": args[0], "request": req})
 	}
 
@@ -283,7 +281,7 @@ func runTaskUpdate(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	out := output.NewJSON(os.Stdout)
+	out := newOutput()
 	return out.Print(task)
 }
 
@@ -301,7 +299,7 @@ func runTaskComplete(_ *cobra.Command, args []string) error {
 	req := models.TaskUpdateRequest{Completed: &completed}
 
 	if cfg.DryRun {
-		out := output.NewJSON(os.Stdout)
+		out := newOutput()
 		result := map[string]any{"dry_run": true, "gid": taskGID, "action": "complete"}
 		if cfg.Sections != nil && cfg.Sections["done"] != "" {
 			result["move_to_section"] = cfg.Sections["done"]
@@ -321,7 +319,7 @@ func runTaskComplete(_ *cobra.Command, args []string) error {
 		}
 	}
 
-	out := output.NewJSON(os.Stdout)
+	out := newOutput()
 	return out.Print(task)
 }
 
@@ -339,7 +337,7 @@ func runTaskReopen(_ *cobra.Command, args []string) error {
 	req := models.TaskUpdateRequest{Completed: &completed}
 
 	if cfg.DryRun {
-		out := output.NewJSON(os.Stdout)
+		out := newOutput()
 		result := map[string]any{"dry_run": true, "gid": taskGID, "action": "reopen"}
 		if cfg.Sections != nil && cfg.Sections["in_progress"] != "" {
 			result["move_to_section"] = cfg.Sections["in_progress"]
@@ -359,7 +357,7 @@ func runTaskReopen(_ *cobra.Command, args []string) error {
 		}
 	}
 
-	out := output.NewJSON(os.Stdout)
+	out := newOutput()
 	return out.Print(task)
 }
 
@@ -373,7 +371,7 @@ func runTaskDelete(_ *cobra.Command, args []string) error {
 	}
 
 	if cfg.DryRun {
-		out := output.NewJSON(os.Stdout)
+		out := newOutput()
 		return out.Print(map[string]any{"dry_run": true, "gid": args[0], "action": "delete"})
 	}
 
@@ -382,7 +380,7 @@ func runTaskDelete(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	out := output.NewJSON(os.Stdout)
+	out := newOutput()
 	return out.Print(map[string]any{"deleted": true, "gid": args[0]})
 }
 
@@ -399,7 +397,7 @@ func runTaskAssign(_ *cobra.Command, args []string) error {
 	req := models.TaskUpdateRequest{Assignee: &assignee}
 
 	if cfg.DryRun {
-		out := output.NewJSON(os.Stdout)
+		out := newOutput()
 		return out.Print(map[string]any{"dry_run": true, "gid": args[0], "assignee": assignee})
 	}
 
@@ -409,6 +407,6 @@ func runTaskAssign(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	out := output.NewJSON(os.Stdout)
+	out := newOutput()
 	return out.Print(task)
 }
