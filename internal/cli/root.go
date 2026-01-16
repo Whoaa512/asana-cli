@@ -82,7 +82,7 @@ var reopenCmd = &cobra.Command{
 
 func Execute() int {
 	if err := rootCmd.Execute(); err != nil {
-		out := output.NewJSON(os.Stdout)
+		out := newOutput()
 		_ = out.PrintError(err)
 		return errors.GetExitCode(err)
 	}
@@ -133,7 +133,7 @@ func runNote(_ *cobra.Command, args []string) error {
 	}
 
 	if cfg.DryRun {
-		out := output.NewJSON(os.Stdout)
+		out := newOutput()
 		return out.Print(map[string]any{"dry_run": true, "task_gid": cfg.Task, "text": args[0]})
 	}
 
@@ -143,7 +143,7 @@ func runNote(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	out := output.NewJSON(os.Stdout)
+	out := newOutput()
 	return out.Print(story)
 }
 
@@ -164,7 +164,7 @@ func runDone(_ *cobra.Command, _ []string) error {
 	req := models.TaskUpdateRequest{Completed: &completed}
 
 	if cfg.DryRun {
-		out := output.NewJSON(os.Stdout)
+		out := newOutput()
 		result := map[string]any{"dry_run": true, "task_gid": cfg.Task, "action": "complete"}
 		if cfg.Sections != nil && cfg.Sections["done"] != "" {
 			result["move_to_section"] = cfg.Sections["done"]
@@ -184,7 +184,7 @@ func runDone(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	out := output.NewJSON(os.Stdout)
+	out := newOutput()
 	return out.Print(task)
 }
 
@@ -205,7 +205,7 @@ func runReopen(_ *cobra.Command, _ []string) error {
 	req := models.TaskUpdateRequest{Completed: &completed}
 
 	if cfg.DryRun {
-		out := output.NewJSON(os.Stdout)
+		out := newOutput()
 		result := map[string]any{"dry_run": true, "task_gid": cfg.Task, "action": "reopen"}
 		if cfg.Sections != nil && cfg.Sections["in_progress"] != "" {
 			result["move_to_section"] = cfg.Sections["in_progress"]
@@ -225,6 +225,6 @@ func runReopen(_ *cobra.Command, _ []string) error {
 		}
 	}
 
-	out := output.NewJSON(os.Stdout)
+	out := newOutput()
 	return out.Print(task)
 }
