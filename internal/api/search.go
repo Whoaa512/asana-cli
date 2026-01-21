@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/whoaa512/asana-cli/internal/models"
 )
@@ -16,6 +17,7 @@ type SearchTasksOptions struct {
 	Completed *bool
 	Limit     int
 	Offset    string
+	OptFields []string
 }
 
 func (c *HTTPClient) SearchTasks(ctx context.Context, opts SearchTasksOptions) (*models.ListResponse[models.Task], error) {
@@ -30,6 +32,9 @@ func (c *HTTPClient) SearchTasks(ctx context.Context, opts SearchTasksOptions) (
 
 	params := url.Values{}
 	params.Set("text", opts.Text)
+	if len(opts.OptFields) > 0 {
+		params.Set("opt_fields", strings.Join(opts.OptFields, ","))
+	}
 	if opts.Limit > 0 {
 		params.Set("limit", fmt.Sprintf("%d", opts.Limit))
 	}

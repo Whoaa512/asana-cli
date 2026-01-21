@@ -70,6 +70,7 @@ func runSearch(_ *cobra.Command, args []string) error {
 		Assignee:  searchAssignee,
 		Limit:     searchLimit,
 		Offset:    searchOffset,
+		OptFields: []string{"name", "completed"},
 	}
 
 	if !searchCompleted {
