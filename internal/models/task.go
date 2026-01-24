@@ -14,6 +14,9 @@ type Task struct {
 	Dependencies *[]Task         `json:"dependencies,omitempty"`
 }
 
+func (t Task) GetName() string { return t.Name }
+func (t Task) GetGID() string  { return t.GID }
+
 type TaskCreateRequest struct {
 	Name      string   `json:"name"`
 	Notes     string   `json:"notes,omitempty"`

@@ -6,3 +6,6 @@ type Workspace struct {
 	IsOrganization bool     `json:"is_organization"`
 	EmailDomains   []string `json:"email_domains,omitempty"`
 }
+
+func (w Workspace) GetName() string { return w.Name }
+func (w Workspace) GetGID() string  { return w.GID }

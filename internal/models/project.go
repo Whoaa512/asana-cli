@@ -9,6 +9,9 @@ type Project struct {
 	Workspace *AsanaResource `json:"workspace,omitempty"`
 }
 
+func (p Project) GetName() string { return p.Name }
+func (p Project) GetGID() string  { return p.GID }
+
 type ProjectCreateRequest struct {
 	Name      string `json:"name"`
 	Workspace string `json:"workspace,omitempty"`

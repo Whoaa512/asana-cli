@@ -21,6 +21,9 @@ type taskMatch struct {
 	score int
 }
 
+func (t taskMatch) GetName() string { return t.task.Name }
+func (t taskMatch) GetGID() string  { return t.task.GID }
+
 func resolveTaskGID(ctx context.Context, cfg *config.Config, client api.Client, nameOrGID string, allowPick bool) (string, error) {
 	if gidRegex.MatchString(nameOrGID) {
 		return nameOrGID, nil

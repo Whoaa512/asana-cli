@@ -16,25 +16,32 @@ var (
 	gidStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 )
 
-type pickerModel struct {
-	matches  []taskMatch
+type Pickable interface {
+	GetName() string
+	GetGID() string
+}
+
+type pickerModel[T Pickable] struct {
+	items    []T
+	prompt   string
 	cursor   int
-	selected *taskMatch
+	selected *T
 	quitting bool
 }
 
-func newPickerModel(matches []taskMatch) pickerModel {
-	return pickerModel{
-		matches: matches,
-		cursor:  0,
+func newGenericPickerModel[T Pickable](items []T, prompt string) pickerModel[T] {
+	return pickerModel[T]{
+		items:  items,
+		prompt: prompt,
+		cursor: 0,
 	}
 }
 
-func (m pickerModel) Init() tea.Cmd {
+func (m pickerModel[T]) Init() tea.Cmd {
 	return nil
 }
 
-func (m pickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m pickerModel[T]) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -48,12 +55,12 @@ func (m pickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case "down", "j":
-			if m.cursor < len(m.matches)-1 {
+			if m.cursor < len(m.items)-1 {
 				m.cursor++
 			}
 
 		case "enter", " ":
-			m.selected = &m.matches[m.cursor]
+			m.selected = &m.items[m.cursor]
 			return m, tea.Quit
 		}
 	}
@@ -61,12 +68,12 @@ func (m pickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m pickerModel) View() string {
+func (m pickerModel[T]) View() string {
 	var b strings.Builder
 
-	b.WriteString("Select a task (j/k to move, enter to select, q to quit):\n\n")
+	b.WriteString(m.prompt + " (j/k to move, enter to select, q to quit):\n\n")
 
-	for i, match := range m.matches {
+	for i, item := range m.items {
 		cursor := "  "
 		style := normalStyle
 		if i == m.cursor {
@@ -74,33 +81,37 @@ func (m pickerModel) View() string {
 			style = selectedStyle
 		}
 
-		name := match.task.Name
+		name := item.GetName()
 		if len(name) > 60 {
 			name = name[:57] + "..."
 		}
 
-		line := fmt.Sprintf("%s%s %s\n", cursor, style.Render(name), gidStyle.Render("("+match.task.GID+")"))
+		line := fmt.Sprintf("%s%s %s\n", cursor, style.Render(name), gidStyle.Render("("+item.GetGID()+")"))
 		b.WriteString(line)
 	}
 
 	return b.String()
 }
 
-func pickTask(matches []taskMatch) (*taskMatch, error) {
-	if len(matches) == 0 {
-		return nil, errors.NewGeneralError("no tasks to pick from", nil)
+func pick[T Pickable](items []T, prompt string) (*T, error) {
+	if len(items) == 0 {
+		return nil, errors.NewGeneralError("no items to pick from", nil)
 	}
 
-	p := tea.NewProgram(newPickerModel(matches))
+	p := tea.NewProgram(newGenericPickerModel(items, prompt))
 	result, err := p.Run()
 	if err != nil {
 		return nil, errors.NewGeneralError("picker failed", err)
 	}
 
-	m := result.(pickerModel)
+	m := result.(pickerModel[T])
 	if m.selected == nil {
-		return nil, errors.NewGeneralError("no task selected", nil)
+		return nil, errors.NewGeneralError("no item selected", nil)
 	}
 
 	return m.selected, nil
+}
+
+func pickTask(matches []taskMatch) (*taskMatch, error) {
+	return pick(matches, "Select a task")
 }
