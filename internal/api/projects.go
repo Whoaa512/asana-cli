@@ -97,10 +97,11 @@ func (c *HTTPClient) ListUserProjects(ctx context.Context, opts UserProjectListO
 		return nil, fmt.Errorf("workspace is required")
 	}
 
-	path := fmt.Sprintf("/workspaces/%s/projects", opts.Workspace)
+	path := "/users/me/project_memberships"
 
 	params := url.Values{}
-	params.Set("opt_fields", "name,archived,workspace,color")
+	params.Set("workspace", opts.Workspace)
+	params.Set("opt_fields", "project.name,project.archived,project.color")
 	if opts.Limit > 0 {
 		params.Set("limit", fmt.Sprintf("%d", opts.Limit))
 	}
@@ -110,16 +111,21 @@ func (c *HTTPClient) ListUserProjects(ctx context.Context, opts UserProjectListO
 	path += "?" + params.Encode()
 
 	var response struct {
-		Data     []models.Project `json:"data"`
-		NextPage *models.PageInfo `json:"next_page,omitempty"`
+		Data     []models.ProjectMembership `json:"data"`
+		NextPage *models.PageInfo           `json:"next_page,omitempty"`
 	}
 
 	if err := c.get(ctx, path, &response); err != nil {
 		return nil, err
 	}
 
+	projects := make([]models.Project, len(response.Data))
+	for i, m := range response.Data {
+		projects[i] = m.Project
+	}
+
 	return &models.ListResponse[models.Project]{
-		Data:     response.Data,
+		Data:     projects,
 		NextPage: response.NextPage,
 	}, nil
 }

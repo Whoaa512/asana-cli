@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -27,8 +28,8 @@ var meTeamsCmd = &cobra.Command{
 
 var meProjectsCmd = &cobra.Command{
 	Use:   "projects",
-	Short: "List workspace projects",
-	Long:  "List projects in my workspace. Asana doesn't have user-specific project filtering; this returns all visible workspace projects.",
+	Short: "List my projects",
+	Long:  "List projects the current user is a member of.",
 	RunE:  runMeProjects,
 }
 
@@ -141,8 +142,10 @@ func runMeProjects(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
-	out := output.NewJSON(os.Stdout)
-	return out.Print(result)
+	for _, p := range result.Data {
+		fmt.Printf("%s (%s)\n", p.Name, p.GID)
+	}
+	return nil
 }
 
 func runMeTasks(_ *cobra.Command, _ []string) error {

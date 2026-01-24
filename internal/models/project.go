@@ -19,3 +19,8 @@ type ProjectCreateRequest struct {
 	Notes     string `json:"notes,omitempty"`
 	Color     string `json:"color,omitempty"`
 }
+
+type ProjectMembership struct {
+	GID     string  `json:"gid"`
+	Project Project `json:"project"`
+}

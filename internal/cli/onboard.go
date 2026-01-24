@@ -194,7 +194,7 @@ func pickProjectOptional(ctx context.Context, client api.Client, workspaceGID st
 		return nil, nil
 	}
 
-	resp, err := client.ListProjects(ctx, api.ProjectListOptions{
+	resp, err := client.ListUserProjects(ctx, api.UserProjectListOptions{
 		Workspace: workspaceGID,
 		Limit:     100,
 	})
@@ -203,11 +203,10 @@ func pickProjectOptional(ctx context.Context, client api.Client, workspaceGID st
 	}
 
 	if len(resp.Data) == 0 {
-		fmt.Println("No projects found in this workspace.")
+		fmt.Println("No projects found.")
 		return nil, nil
 	}
 
-	// Filter out archived projects
 	var activeProjects []models.Project
 	for _, p := range resp.Data {
 		if !p.Archived {
@@ -216,7 +215,7 @@ func pickProjectOptional(ctx context.Context, client api.Client, workspaceGID st
 	}
 
 	if len(activeProjects) == 0 {
-		fmt.Println("No active projects found in this workspace.")
+		fmt.Println("No active projects found.")
 		return nil, nil
 	}
 
