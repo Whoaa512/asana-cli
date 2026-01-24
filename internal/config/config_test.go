@@ -8,6 +8,7 @@ import (
 )
 
 func TestLoadDefaults(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
 	t.Setenv("ASANA_ACCESS_TOKEN", "")
 	t.Setenv("ASANA_WORKSPACE", "")
 	t.Setenv("ASANA_DEBUG", "")
