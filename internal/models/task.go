@@ -1,5 +1,16 @@
 package models
 
+type CustomField struct {
+	GID             string          `json:"gid"`
+	Name            string          `json:"name,omitempty"`
+	Type            string          `json:"type,omitempty"`
+	DisplayValue    string          `json:"display_value,omitempty"`
+	TextValue       *string         `json:"text_value,omitempty"`
+	NumberValue     *float64        `json:"number_value,omitempty"`
+	EnumValue       *AsanaResource  `json:"enum_value,omitempty"`
+	MultiEnumValues []AsanaResource `json:"multi_enum_values,omitempty"`
+}
+
 type Task struct {
 	GID          string          `json:"gid"`
 	Name         string          `json:"name"`
@@ -12,22 +23,25 @@ type Task struct {
 	Parent       *AsanaResource  `json:"parent,omitempty"`
 	Tags         []AsanaResource `json:"tags,omitempty"`
 	Dependencies *[]Task         `json:"dependencies,omitempty"`
+	CustomFields []CustomField   `json:"custom_fields,omitempty"`
 }
 
 type TaskCreateRequest struct {
-	Name      string   `json:"name"`
-	Notes     string   `json:"notes,omitempty"`
-	Assignee  string   `json:"assignee,omitempty"`
-	DueOn     string   `json:"due_on,omitempty"`
-	Projects  []string `json:"projects,omitempty"`
-	Parent    string   `json:"parent,omitempty"`
-	Workspace string   `json:"workspace,omitempty"`
+	Name         string            `json:"name"`
+	Notes        string            `json:"notes,omitempty"`
+	Assignee     string            `json:"assignee,omitempty"`
+	DueOn        string            `json:"due_on,omitempty"`
+	Projects     []string          `json:"projects,omitempty"`
+	Parent       string            `json:"parent,omitempty"`
+	Workspace    string            `json:"workspace,omitempty"`
+	CustomFields map[string]string `json:"custom_fields,omitempty"`
 }
 
 type TaskUpdateRequest struct {
-	Name      *string `json:"name,omitempty"`
-	Notes     *string `json:"notes,omitempty"`
-	Assignee  *string `json:"assignee,omitempty"`
-	DueOn     *string `json:"due_on,omitempty"`
-	Completed *bool   `json:"completed,omitempty"`
+	Name         *string           `json:"name,omitempty"`
+	Notes        *string           `json:"notes,omitempty"`
+	Assignee     *string           `json:"assignee,omitempty"`
+	DueOn        *string           `json:"due_on,omitempty"`
+	Completed    *bool             `json:"completed,omitempty"`
+	CustomFields map[string]string `json:"custom_fields,omitempty"`
 }

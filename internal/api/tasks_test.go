@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/whoaa512/asana-cli/internal/config"
+	"github.com/whoaa512/asana-cli/internal/models"
 )
 
 func TestAddFollowers(t *testing.T) {
@@ -562,5 +563,68 @@ func TestListTaskProjects(t *testing.T) {
 	}
 	if projects[1].Name != "Project Two" {
 		t.Errorf("projects[1].Name = %q, want %q", projects[1].Name, "Project Two")
+	}
+}
+
+func TestUpdateTaskWithCustomFields(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/tasks/12345" {
+			t.Errorf("unexpected path: %s", r.URL.Path)
+		}
+		if r.Method != http.MethodPut {
+			t.Errorf("unexpected method: %s", r.Method)
+		}
+
+		var req struct {
+			Data struct {
+				CustomFields map[string]string `json:"custom_fields"`
+				Name         *string           `json:"name,omitempty"`
+			} `json:"data"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("failed to decode request: %v", err)
+		}
+
+		if len(req.Data.CustomFields) != 2 {
+			t.Fatalf("expected 2 custom fields, got %d", len(req.Data.CustomFields))
+		}
+		if req.Data.CustomFields["12345"] != "hello" {
+			t.Errorf("custom_fields[12345] = %q, want %q", req.Data.CustomFields["12345"], "hello")
+		}
+		if req.Data.CustomFields["67890"] != "enum_option_gid" {
+			t.Errorf("custom_fields[67890] = %q, want %q", req.Data.CustomFields["67890"], "enum_option_gid")
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(map[string]any{
+			"data": map[string]any{
+				"gid":  "12345",
+				"name": "Test Task",
+			},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}))
+	defer server.Close()
+
+	cfg := &config.Config{
+		AccessToken: "test-token",
+		Timeout:     5 * time.Second,
+	}
+	client := NewHTTPClient(cfg, WithBaseURL(server.URL))
+
+	task, err := client.UpdateTask(context.Background(), "12345", models.TaskUpdateRequest{
+		CustomFields: map[string]string{
+			"12345": "hello",
+			"67890": "enum_option_gid",
+		},
+	})
+	if err != nil {
+		t.Fatalf("UpdateTask() error = %v", err)
+	}
+
+	if task.GID != "12345" {
+		t.Errorf("task.GID = %q, want %q", task.GID, "12345")
 	}
 }
