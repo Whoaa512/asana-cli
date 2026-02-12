@@ -2,6 +2,8 @@ package cli
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -103,11 +105,13 @@ var (
 	taskCreateAssignee string
 	taskCreateDueOn    string
 	taskCreateParent   string
+	taskCreateCustom   []string
 
 	taskUpdateName     string
 	taskUpdateNotes    string
 	taskUpdateAssignee string
 	taskUpdateDueOn    string
+	taskUpdateCustom   []string
 
 	taskPick bool
 )
@@ -136,12 +140,14 @@ func init() {
 	taskCreateCmd.Flags().StringVar(&taskCreateAssignee, "assignee", "", "Assignee GID or 'me'")
 	taskCreateCmd.Flags().StringVar(&taskCreateDueOn, "due-on", "", "Due date (YYYY-MM-DD)")
 	taskCreateCmd.Flags().StringVar(&taskCreateParent, "parent", "", "Parent task GID (for subtasks)")
+	taskCreateCmd.Flags().StringArrayVar(&taskCreateCustom, "custom-field", nil, "Set custom field (field_gid=value, repeatable)")
 	_ = taskCreateCmd.MarkFlagRequired("name")
 
 	taskUpdateCmd.Flags().StringVar(&taskUpdateName, "name", "", "New task name")
 	taskUpdateCmd.Flags().StringVar(&taskUpdateNotes, "notes", "", "New task notes")
 	taskUpdateCmd.Flags().StringVar(&taskUpdateAssignee, "assignee", "", "New assignee GID or 'me'")
 	taskUpdateCmd.Flags().StringVar(&taskUpdateDueOn, "due-on", "", "New due date (YYYY-MM-DD)")
+	taskUpdateCmd.Flags().StringArrayVar(&taskUpdateCustom, "custom-field", nil, "Set custom field (field_gid=value, repeatable)")
 
 	taskGetCmd.Flags().BoolVar(&taskPick, "pick", false, "Show interactive picker if multiple matches")
 	taskUpdateCmd.Flags().BoolVar(&taskPick, "pick", false, "Show interactive picker if multiple matches")
@@ -239,6 +245,12 @@ func runTaskCreate(_ *cobra.Command, _ []string) error {
 		Parent:   taskCreateParent,
 	}
 
+	cf, err := parseCustomFields(taskCreateCustom)
+	if err != nil {
+		return err
+	}
+	req.CustomFields = cf
+
 	project := taskCreateProject
 	if project == "" && cfg.Project != "" {
 		project = cfg.Project
@@ -299,6 +311,11 @@ func runTaskUpdate(_ *cobra.Command, args []string) error {
 	if taskUpdateDueOn != "" {
 		req.DueOn = &taskUpdateDueOn
 	}
+	cf, err := parseCustomFields(taskUpdateCustom)
+	if err != nil {
+		return err
+	}
+	req.CustomFields = cf
 
 	if cfg.DryRun {
 		out := newOutput()
@@ -448,6 +465,21 @@ func runTaskDelete(_ *cobra.Command, args []string) error {
 
 	out := newOutput()
 	return out.Print(map[string]any{"deleted": true, "gid": taskGID})
+}
+
+func parseCustomFields(pairs []string) (map[string]string, error) {
+	if len(pairs) == 0 {
+		return nil, nil
+	}
+	m := make(map[string]string, len(pairs))
+	for _, pair := range pairs {
+		k, v, ok := strings.Cut(pair, "=")
+		if !ok {
+			return nil, fmt.Errorf("invalid custom field format %q, expected field_gid=value", pair)
+		}
+		m[k] = v
+	}
+	return m, nil
 }
 
 func runTaskAssign(_ *cobra.Command, args []string) error {
