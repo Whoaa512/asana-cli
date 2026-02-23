@@ -169,7 +169,7 @@ func (c *HTTPClient) doMultipartWithRetry(ctx context.Context, method, path stri
 			return errors.NewRateLimitedError(formatRetryAfter(retryAfter))
 		}
 
-		waitTime := calculateBackoff(attempt, retryAfter)
+		waitTime := c.calculateBackoff(attempt, retryAfter)
 		if c.debug && c.debugOut != nil {
 			_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] Rate limited, retrying in %s (attempt %d/%d)\n", waitTime, attempt+1, maxRetries)
 		}
