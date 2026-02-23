@@ -251,6 +251,49 @@ func TestDeleteAttachment(t *testing.T) {
 	}
 }
 
+func TestUploadAttachmentRetriesOnRateLimit(t *testing.T) {
+	tempDir := t.TempDir()
+	filePath := filepath.Join(tempDir, "retry.txt")
+	if err := os.WriteFile(filePath, []byte("retry content"), 0o644); err != nil {
+		t.Fatalf("failed to write temp file: %v", err)
+	}
+
+	var attempts int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := atomic.AddInt32(&attempts, 1)
+		if n == 1 {
+			w.Header().Set("Retry-After", "0")
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, _ = w.Write([]byte(`{"errors":[{"message":"rate limited"}]}`))
+			return
+		}
+
+		if r.Method != http.MethodPost {
+			t.Errorf("unexpected method on retry: %s", r.Method)
+		}
+		if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+			t.Errorf("unexpected content type on retry: %s", r.Header.Get("Content-Type"))
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"gid":"a1","name":"retry.txt","resource_type":"attachment"}}`))
+	}))
+	defer server.Close()
+
+	client := newTestHTTPClient(server.URL)
+	attachment, err := client.UploadAttachment(context.Background(), "123", filePath, "")
+	if err != nil {
+		t.Fatalf("UploadAttachment() error = %v", err)
+	}
+
+	if got := atomic.LoadInt32(&attempts); got != 2 {
+		t.Errorf("attempts = %d, want 2", got)
+	}
+	if attachment.GID != "a1" {
+		t.Errorf("attachment.GID = %q, want %q", attachment.GID, "a1")
+	}
+}
+
 func newTestHTTPClient(baseURL string) *HTTPClient {
 	cfg := &config.Config{
 		AccessToken: "test-token",
