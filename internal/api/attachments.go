@@ -3,14 +3,13 @@ package api
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"mime/multipart"
-	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
-	"time"
+	"strconv"
 
 	"github.com/whoaa512/asana-cli/internal/errors"
 	"github.com/whoaa512/asana-cli/internal/models"
@@ -19,13 +18,15 @@ import (
 func (c *HTTPClient) ListAttachments(ctx context.Context, taskGID string, limit int, offset string) (*models.ListResponse[models.Attachment], error) {
 	path := fmt.Sprintf("/tasks/%s/attachments", taskGID)
 
-	sep := "?"
+	params := url.Values{}
 	if limit > 0 {
-		path += fmt.Sprintf("%slimit=%d", sep, limit)
-		sep = "&"
+		params.Set("limit", strconv.Itoa(limit))
 	}
 	if offset != "" {
-		path += fmt.Sprintf("%soffset=%s", sep, offset)
+		params.Set("offset", offset)
+	}
+	if encoded := params.Encode(); encoded != "" {
+		path += "?" + encoded
 	}
 
 	var response struct {
@@ -67,8 +68,8 @@ func (c *HTTPClient) UploadAttachment(ctx context.Context, taskGID string, fileP
 		uploadName = filepath.Base(filePath)
 	}
 
-	var body bytes.Buffer
-	writer := multipart.NewWriter(&body)
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
 
 	filePart, err := writer.CreateFormFile("file", uploadName)
 	if err != nil {
@@ -92,7 +93,14 @@ func (c *HTTPClient) UploadAttachment(ctx context.Context, taskGID string, fileP
 	}
 
 	path := fmt.Sprintf("/tasks/%s/attachments", taskGID)
-	if err := c.doMultipart(ctx, http.MethodPost, path, bytes.NewReader(body.Bytes()), writer.FormDataContentType(), &response); err != nil {
+	if err := c.executeWithRetry(ctx, requestOpts{
+		method:      "POST",
+		path:        path,
+		bodyBytes:   buf.Bytes(),
+		contentType: writer.FormDataContentType(),
+		debugBody:   fmt.Sprintf("<multipart %d bytes>", buf.Len()),
+		result:      &response,
+	}, 0); err != nil {
 		return nil, err
 	}
 
@@ -101,97 +109,4 @@ func (c *HTTPClient) UploadAttachment(ctx context.Context, taskGID string, fileP
 
 func (c *HTTPClient) DeleteAttachment(ctx context.Context, gid string) error {
 	return c.delete(ctx, "/attachments/"+gid)
-}
-
-func (c *HTTPClient) doMultipart(ctx context.Context, method, path string, body io.Reader, contentType string, result any) error {
-	var bodyBytes []byte
-	if body != nil {
-		var err error
-		bodyBytes, err = io.ReadAll(body)
-		if err != nil {
-			return errors.NewGeneralError("failed to read request body", err)
-		}
-	}
-
-	return c.doMultipartWithRetry(ctx, method, path, bodyBytes, contentType, result, 0)
-}
-
-func (c *HTTPClient) doMultipartWithRetry(ctx context.Context, method, path string, bodyBytes []byte, contentType string, result any, attempt int) error {
-	url := c.baseURL + path
-
-	var body io.Reader
-	if bodyBytes != nil {
-		body = bytes.NewReader(bodyBytes)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, method, url, body)
-	if err != nil {
-		return errors.NewGeneralError("failed to create request", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+c.token)
-	req.Header.Set("Accept", "application/json")
-	if bodyBytes != nil {
-		req.Header.Set("Content-Type", contentType)
-	}
-
-	if c.debug && c.debugOut != nil {
-		_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] %s %s\n", method, url)
-		_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] Authorization: Bearer %s...\n", truncateToken(c.token))
-		if bodyBytes != nil {
-			_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] Request Body: <multipart %d bytes>\n", len(bodyBytes))
-		}
-	}
-
-	start := time.Now()
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return errors.NewNetworkError("request failed", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if c.debug && c.debugOut != nil {
-		_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] Response: %d %s (%s)\n", resp.StatusCode, resp.Status, time.Since(start))
-	}
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return errors.NewNetworkError("failed to read response", err)
-	}
-
-	if c.debug && c.debugOut != nil {
-		_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] Body: %s\n", truncateBody(string(respBody)))
-	}
-
-	if resp.StatusCode == http.StatusTooManyRequests {
-		retryAfter := parseRetryAfter(resp.Header.Get("Retry-After"))
-		if attempt >= maxRetries {
-			return errors.NewRateLimitedError(formatRetryAfter(retryAfter))
-		}
-
-		waitTime := c.calculateBackoff(attempt, retryAfter)
-		if c.debug && c.debugOut != nil {
-			_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] Rate limited, retrying in %s (attempt %d/%d)\n", waitTime, attempt+1, maxRetries)
-		}
-
-		select {
-		case <-ctx.Done():
-			return errors.NewNetworkError("request cancelled", ctx.Err())
-		case <-time.After(waitTime):
-		}
-
-		return c.doMultipartWithRetry(ctx, method, path, bodyBytes, contentType, result, attempt+1)
-	}
-
-	if err := c.checkError(resp.StatusCode, respBody); err != nil {
-		return err
-	}
-
-	if result != nil {
-		if err := json.Unmarshal(respBody, result); err != nil {
-			return errors.NewGeneralError("failed to parse response", err)
-		}
-	}
-
-	return nil
 }
