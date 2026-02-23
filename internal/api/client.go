@@ -23,6 +23,11 @@ type Client interface {
 	ListStories(ctx context.Context, taskGID string, limit int, offset string) (*models.ListResponse[models.Story], error)
 	AddComment(ctx context.Context, taskGID string, text string) (*models.Story, error)
 
+	ListAttachments(ctx context.Context, taskGID string, limit int, offset string) (*models.ListResponse[models.Attachment], error)
+	GetAttachment(ctx context.Context, gid string) (*models.Attachment, error)
+	UploadAttachment(ctx context.Context, taskGID string, filePath string, name string) (*models.Attachment, error)
+	DeleteAttachment(ctx context.Context, gid string) error
+
 	ListSubtasks(ctx context.Context, taskGID string, limit int, offset string) (*models.ListResponse[models.Task], error)
 	AddSubtask(ctx context.Context, parentGID string, name string) (*models.Task, error)
 	SetParent(ctx context.Context, taskGID string, parentGID *string) (*models.Task, error)
