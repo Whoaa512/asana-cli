@@ -91,6 +91,15 @@ func (c *HTTPClient) delete(ctx context.Context, path string) error {
 	return c.do(ctx, http.MethodDelete, path, nil, nil)
 }
 
+type requestOpts struct {
+	method      string
+	path        string
+	bodyBytes   []byte
+	contentType string
+	debugBody   string
+	result      any
+}
+
 func (c *HTTPClient) do(ctx context.Context, method, path string, body io.Reader, result any) error {
 	var bodyBytes []byte
 	if body != nil {
@@ -101,33 +110,40 @@ func (c *HTTPClient) do(ctx context.Context, method, path string, body io.Reader
 		}
 	}
 
-	return c.doWithRetry(ctx, method, path, bodyBytes, result, 0)
+	return c.executeWithRetry(ctx, requestOpts{
+		method:      method,
+		path:        path,
+		bodyBytes:   bodyBytes,
+		contentType: "application/json",
+		debugBody:   truncateBody(string(bodyBytes)),
+		result:      result,
+	}, 0)
 }
 
-func (c *HTTPClient) doWithRetry(ctx context.Context, method, path string, bodyBytes []byte, result any, attempt int) error {
-	url := c.baseURL + path
+func (c *HTTPClient) executeWithRetry(ctx context.Context, opts requestOpts, attempt int) error {
+	url := c.baseURL + opts.path
 
 	var body io.Reader
-	if bodyBytes != nil {
-		body = bytes.NewReader(bodyBytes)
+	if opts.bodyBytes != nil {
+		body = bytes.NewReader(opts.bodyBytes)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, url, body)
+	req, err := http.NewRequestWithContext(ctx, opts.method, url, body)
 	if err != nil {
 		return errors.NewGeneralError("failed to create request", err)
 	}
 
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("Accept", "application/json")
-	if bodyBytes != nil {
-		req.Header.Set("Content-Type", "application/json")
+	if opts.bodyBytes != nil {
+		req.Header.Set("Content-Type", opts.contentType)
 	}
 
 	if c.debug && c.debugOut != nil {
-		_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] %s %s\n", method, url)
+		_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] %s %s\n", opts.method, url)
 		_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] Authorization: Bearer %s...\n", truncateToken(c.token))
-		if bodyBytes != nil {
-			_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] Request Body: %s\n", truncateBody(string(bodyBytes)))
+		if opts.bodyBytes != nil {
+			_, _ = fmt.Fprintf(c.debugOut, "[DEBUG] Request Body: %s\n", opts.debugBody)
 		}
 	}
 
@@ -171,15 +187,15 @@ func (c *HTTPClient) doWithRetry(ctx context.Context, method, path string, bodyB
 		case <-timer.C:
 		}
 
-		return c.doWithRetry(ctx, method, path, bodyBytes, result, attempt+1)
+		return c.executeWithRetry(ctx, opts, attempt+1)
 	}
 
 	if err := c.checkError(resp.StatusCode, respBody); err != nil {
 		return err
 	}
 
-	if result != nil {
-		if err := json.Unmarshal(respBody, result); err != nil {
+	if opts.result != nil {
+		if err := json.Unmarshal(respBody, opts.result); err != nil {
 			return errors.NewGeneralError("failed to parse response", err)
 		}
 	}
