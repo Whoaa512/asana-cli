@@ -51,11 +51,25 @@ func (c *HTTPClient) ListTasks(ctx context.Context, opts TaskListOptions) (*mode
 			params.Set("assignee", opts.Assignee)
 		}
 	}
-	if opts.Completed != nil {
+	if opts.Completed != nil && isSearchEndpoint {
 		params.Set("completed", fmt.Sprintf("%t", *opts.Completed))
 	}
-	if len(opts.OptFields) > 0 {
-		params.Set("opt_fields", strings.Join(opts.OptFields, ","))
+
+	optFields := opts.OptFields
+	if opts.Completed != nil && !isSearchEndpoint {
+		hasCompleted := false
+		for _, f := range optFields {
+			if f == "completed" {
+				hasCompleted = true
+				break
+			}
+		}
+		if !hasCompleted {
+			optFields = append(optFields, "completed")
+		}
+	}
+	if len(optFields) > 0 {
+		params.Set("opt_fields", strings.Join(optFields, ","))
 	}
 	if len(params) > 0 {
 		path += "?" + params.Encode()
@@ -68,6 +82,16 @@ func (c *HTTPClient) ListTasks(ctx context.Context, opts TaskListOptions) (*mode
 
 	if err := c.get(ctx, path, &response); err != nil {
 		return nil, err
+	}
+
+	if opts.Completed != nil && !isSearchEndpoint {
+		filtered := make([]models.Task, 0, len(response.Data))
+		for _, t := range response.Data {
+			if t.Completed == *opts.Completed {
+				filtered = append(filtered, t)
+			}
+		}
+		response.Data = filtered
 	}
 
 	return &models.ListResponse[models.Task]{

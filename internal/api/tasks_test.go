@@ -5,11 +5,104 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/whoaa512/asana-cli/internal/config"
 )
+
+func boolPtr(b bool) *bool { return &b }
+
+func TestListTasksCompletedFilter(t *testing.T) {
+	tasks := []map[string]any{
+		{"gid": "1", "name": "Done task", "completed": true},
+		{"gid": "2", "name": "Open task", "completed": false},
+		{"gid": "3", "name": "Another done", "completed": true},
+	}
+
+	var expectCompletedFilter bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("completed") != "" {
+			t.Errorf("completed param should not be sent to project endpoint, got %q", r.URL.Query().Get("completed"))
+		}
+		if expectCompletedFilter && !strings.Contains(r.URL.Query().Get("opt_fields"), "completed") {
+			t.Error("opt_fields should include 'completed' when filtering client-side")
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": tasks})
+	}))
+	defer server.Close()
+
+	cfg := &config.Config{AccessToken: "test-token", Timeout: 5 * time.Second}
+	client := NewHTTPClient(cfg, WithBaseURL(server.URL))
+
+	t.Run("filter incomplete", func(t *testing.T) {
+		expectCompletedFilter = true
+		resp, err := client.ListTasks(context.Background(), TaskListOptions{
+			Project:   "proj1",
+			Completed: boolPtr(false),
+		})
+		if err != nil {
+			t.Fatalf("ListTasks() error = %v", err)
+		}
+		if len(resp.Data) != 1 {
+			t.Fatalf("expected 1 task, got %d", len(resp.Data))
+		}
+		if resp.Data[0].GID != "2" {
+			t.Errorf("expected task GID 2, got %s", resp.Data[0].GID)
+		}
+	})
+
+	t.Run("filter completed", func(t *testing.T) {
+		expectCompletedFilter = true
+		resp, err := client.ListTasks(context.Background(), TaskListOptions{
+			Project:   "proj1",
+			Completed: boolPtr(true),
+		})
+		if err != nil {
+			t.Fatalf("ListTasks() error = %v", err)
+		}
+		if len(resp.Data) != 2 {
+			t.Fatalf("expected 2 tasks, got %d", len(resp.Data))
+		}
+	})
+
+	t.Run("no filter returns all", func(t *testing.T) {
+		expectCompletedFilter = false
+		resp, err := client.ListTasks(context.Background(), TaskListOptions{
+			Project: "proj1",
+		})
+		if err != nil {
+			t.Fatalf("ListTasks() error = %v", err)
+		}
+		if len(resp.Data) != 3 {
+			t.Fatalf("expected 3 tasks, got %d", len(resp.Data))
+		}
+	})
+}
+
+func TestListTasksSearchEndpointPassesCompletedParam(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("completed") != "false" {
+			t.Errorf("search endpoint should receive completed param, got %q", r.URL.Query().Get("completed"))
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"data": []map[string]any{}})
+	}))
+	defer server.Close()
+
+	cfg := &config.Config{AccessToken: "test-token", Timeout: 5 * time.Second}
+	client := NewHTTPClient(cfg, WithBaseURL(server.URL))
+
+	_, err := client.ListTasks(context.Background(), TaskListOptions{
+		Workspace: "ws1",
+		Completed: boolPtr(false),
+	})
+	if err != nil {
+		t.Fatalf("ListTasks() error = %v", err)
+	}
+}
 
 func TestAddFollowers(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
