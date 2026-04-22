@@ -97,17 +97,19 @@ var (
 	taskListOffset    string
 	taskListTag       string
 
-	taskCreateName     string
-	taskCreateNotes    string
-	taskCreateProject  string
-	taskCreateAssignee string
-	taskCreateDueOn    string
-	taskCreateParent   string
+	taskCreateName         string
+	taskCreateNotes        string
+	taskCreateProject      string
+	taskCreateAssignee     string
+	taskCreateDueOn        string
+	taskCreateParent       string
+	taskCreateCustomFields []string
 
-	taskUpdateName     string
-	taskUpdateNotes    string
-	taskUpdateAssignee string
-	taskUpdateDueOn    string
+	taskUpdateName         string
+	taskUpdateNotes        string
+	taskUpdateAssignee     string
+	taskUpdateDueOn        string
+	taskUpdateCustomFields []string
 
 	taskPick bool
 )
@@ -136,12 +138,14 @@ func init() {
 	taskCreateCmd.Flags().StringVar(&taskCreateAssignee, "assignee", "", "Assignee GID or 'me'")
 	taskCreateCmd.Flags().StringVar(&taskCreateDueOn, "due-on", "", "Due date (YYYY-MM-DD)")
 	taskCreateCmd.Flags().StringVar(&taskCreateParent, "parent", "", "Parent task GID (for subtasks)")
+	taskCreateCmd.Flags().StringArrayVar(&taskCreateCustomFields, "custom-field", nil, "Custom field value as field-gid=value (repeatable)")
 	_ = taskCreateCmd.MarkFlagRequired("name")
 
 	taskUpdateCmd.Flags().StringVar(&taskUpdateName, "name", "", "New task name")
 	taskUpdateCmd.Flags().StringVar(&taskUpdateNotes, "notes", "", "New task notes")
 	taskUpdateCmd.Flags().StringVar(&taskUpdateAssignee, "assignee", "", "New assignee GID or 'me'")
 	taskUpdateCmd.Flags().StringVar(&taskUpdateDueOn, "due-on", "", "New due date (YYYY-MM-DD)")
+	taskUpdateCmd.Flags().StringArrayVar(&taskUpdateCustomFields, "custom-field", nil, "Custom field value as field-gid=value (repeatable)")
 
 	taskGetCmd.Flags().BoolVar(&taskPick, "pick", false, "Show interactive picker if multiple matches")
 	taskUpdateCmd.Flags().BoolVar(&taskPick, "pick", false, "Show interactive picker if multiple matches")
@@ -231,12 +235,21 @@ func runTaskCreate(_ *cobra.Command, _ []string) error {
 		return err
 	}
 
+	client := newClient(cfg)
+	ctx := context.Background()
+
+	cf, err := resolveCustomFields(ctx, client, taskCreateCustomFields)
+	if err != nil {
+		return err
+	}
+
 	req := models.TaskCreateRequest{
-		Name:     taskCreateName,
-		Notes:    taskCreateNotes,
-		Assignee: taskCreateAssignee,
-		DueOn:    taskCreateDueOn,
-		Parent:   taskCreateParent,
+		Name:         taskCreateName,
+		Notes:        taskCreateNotes,
+		Assignee:     taskCreateAssignee,
+		DueOn:        taskCreateDueOn,
+		Parent:       taskCreateParent,
+		CustomFields: cf,
 	}
 
 	project := taskCreateProject
@@ -259,8 +272,7 @@ func runTaskCreate(_ *cobra.Command, _ []string) error {
 		return out.Print(map[string]any{"dry_run": true, "request": req})
 	}
 
-	client := newClient(cfg)
-	task, err := client.CreateTask(context.Background(), req)
+	task, err := client.CreateTask(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -286,7 +298,12 @@ func runTaskUpdate(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	req := models.TaskUpdateRequest{}
+	cf, err := resolveCustomFields(ctx, client, taskUpdateCustomFields)
+	if err != nil {
+		return err
+	}
+
+	req := models.TaskUpdateRequest{CustomFields: cf}
 	if taskUpdateName != "" {
 		req.Name = &taskUpdateName
 	}
@@ -483,3 +500,4 @@ func runTaskAssign(_ *cobra.Command, args []string) error {
 	out := newOutput()
 	return out.Print(task)
 }
+

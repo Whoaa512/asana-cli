@@ -69,4 +69,8 @@ type Client interface {
 	GetTeam(ctx context.Context, gid string) (*models.Team, error)
 
 	SearchTasks(ctx context.Context, opts SearchTasksOptions) (*models.ListResponse[models.Task], error)
+
+	ListWorkspaceCustomFields(ctx context.Context, workspaceGID string, limit int) (*models.ListResponse[models.CustomField], error)
+	GetCustomField(ctx context.Context, gid string) (*models.CustomField, error)
+	GetProjectCustomFieldSettings(ctx context.Context, projectGID string) (*models.ListResponse[models.CustomFieldSetting], error)
 }
