@@ -100,12 +100,23 @@ func (c *HTTPClient) ListTasks(ctx context.Context, opts TaskListOptions) (*mode
 	}, nil
 }
 
+const taskOptFields = "gid,name,notes,completed,completed_at,due_on," +
+	"assignee.gid,assignee.name," +
+	"projects.gid,projects.name," +
+	"parent.gid,parent.name," +
+	"tags.gid,tags.name," +
+	"custom_fields.gid,custom_fields.name,custom_fields.type,custom_fields.display_value," +
+	"custom_fields.text_value,custom_fields.number_value," +
+	"custom_fields.enum_value.gid,custom_fields.enum_value.name," +
+	"custom_fields.multi_enum_values.gid,custom_fields.multi_enum_values.name"
+
 func (c *HTTPClient) GetTask(ctx context.Context, gid string) (*models.Task, error) {
 	var response struct {
 		Data models.Task `json:"data"`
 	}
 
-	if err := c.get(ctx, "/tasks/"+gid, &response); err != nil {
+	path := "/tasks/" + gid + "?opt_fields=" + taskOptFields
+	if err := c.get(ctx, path, &response); err != nil {
 		return nil, err
 	}
 
