@@ -29,6 +29,9 @@ func TestListTasksCompletedFilter(t *testing.T) {
 		if expectCompletedFilter && !strings.Contains(r.URL.Query().Get("opt_fields"), "completed") {
 			t.Error("opt_fields should include 'completed' when filtering client-side")
 		}
+		if expectCompletedFilter && !strings.Contains(r.URL.Query().Get("opt_fields"), "name") {
+			t.Error("opt_fields should include 'name' when filtering client-side")
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{"data": tasks})
 	}))
@@ -51,6 +54,9 @@ func TestListTasksCompletedFilter(t *testing.T) {
 		}
 		if resp.Data[0].GID != "2" {
 			t.Errorf("expected task GID 2, got %s", resp.Data[0].GID)
+		}
+		if resp.Data[0].Name != "Open task" {
+			t.Errorf("expected task name %q, got %q", "Open task", resp.Data[0].Name)
 		}
 	})
 
