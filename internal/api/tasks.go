@@ -57,12 +57,18 @@ func (c *HTTPClient) ListTasks(ctx context.Context, opts TaskListOptions) (*mode
 
 	optFields := opts.OptFields
 	if opts.Completed != nil && !isSearchEndpoint {
+		hasName := false
 		hasCompleted := false
 		for _, f := range optFields {
+			if f == "name" {
+				hasName = true
+			}
 			if f == "completed" {
 				hasCompleted = true
-				break
 			}
+		}
+		if !hasName {
+			optFields = append(optFields, "name")
 		}
 		if !hasCompleted {
 			optFields = append(optFields, "completed")
